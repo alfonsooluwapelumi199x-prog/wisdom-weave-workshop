@@ -98,11 +98,20 @@ Rules: NEVER guarantee eligibility. Only include real, well-known programs (Chev
       const text = await res.text();
       throw new Error(`AI gateway error: ${res.status} ${text.slice(0, 200)}`);
     }
-    const json = await res.json();
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const content: string = json.choices?.[0]?.message?.content ?? "{}";
-    let parsed: { summary?: string; opportunities?: unknown[] } = {};
+    type Opportunity = {
+      title: string;
+      type: string;
+      country: string;
+      why_fits: string;
+      next_steps: string[];
+      official_resources: Array<{ label: string; url: string }>;
+    };
+    let parsed: { summary: string; opportunities: Opportunity[] } = { summary: "", opportunities: [] };
     try {
-      parsed = JSON.parse(content);
+      const raw = JSON.parse(content) as { summary?: string; opportunities?: Opportunity[] };
+      parsed = { summary: raw.summary ?? "", opportunities: raw.opportunities ?? [] };
     } catch {
       parsed = { summary: content, opportunities: [] };
     }
@@ -110,8 +119,8 @@ Rules: NEVER guarantee eligibility. Only include real, well-known programs (Chev
     const { error: uErr } = await supabase
       .from("profiles")
       .update({
-        ai_summary: parsed.summary ?? null,
-        ai_opportunities: parsed.opportunities ?? [],
+        ai_summary: parsed.summary,
+        ai_opportunities: parsed.opportunities as unknown as never,
         ai_generated_at: new Date().toISOString(),
       })
       .eq("id", userId);
