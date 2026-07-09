@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Briefcase, GraduationCap, Award } from "lucide-react";
+import { ArrowRight, Briefcase, GraduationCap, Award, Home, Check, AlertTriangle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -33,27 +33,165 @@ const C = {
 
 type Card = {
   id: string;
-  kind: "work" | "study" | "scholarship";
+  kind: "work" | "study" | "scholarship" | "pr";
   flag?: string;
   country?: string;
   title: string;
-  matchStrength?: "Strong Match" | "Good Match" | "Emerging";
   tagline: string;
+  score: number;
+  reasons: { ok: boolean; text: string }[];
 };
 
-const WORK: Card[] = [
-  { id: "work-ca", kind: "work", flag: "🇨🇦", country: "Canada", title: "Canada", matchStrength: "Strong Match", tagline: "Healthcare roles actively recruiting internationally." },
-  { id: "work-de", kind: "work", flag: "🇩🇪", country: "Germany", title: "Germany", matchStrength: "Strong Match", tagline: "Skilled worker visa fast-tracks your profession." },
-];
-const STUDY: Card[] = [
-  { id: "study-au", kind: "study", flag: "🇦🇺", country: "Australia", title: "Australia", matchStrength: "Good Match", tagline: "Post-study work rights of up to four years." },
-  { id: "study-ie", kind: "study", flag: "🇮🇪", country: "Ireland", title: "Ireland", matchStrength: "Good Match", tagline: "English-taught programmes with a two-year stay-back." },
-];
-const SCHOLARSHIPS: Card[] = [
-  { id: "sch-intl", kind: "scholarship", title: "International Scholarships", tagline: "Global funding open to your nationality this cycle." },
-  { id: "sch-research", kind: "scholarship", title: "Research Funding", tagline: "Grants matched to your field and qualification level." },
-  { id: "sch-health", kind: "scholarship", title: "Healthcare Scholarships", tagline: "Sector-specific funding for medical and nursing pathways." },
-];
+const COUNTRY_META: Record<string, { flag: string }> = {
+  Canada: { flag: "🇨🇦" },
+  Australia: { flag: "🇦🇺" },
+  Germany: { flag: "🇩🇪" },
+  "United Kingdom": { flag: "🇬🇧" },
+  Ireland: { flag: "🇮🇪" },
+  "United States": { flag: "🇺🇸" },
+  "New Zealand": { flag: "🇳🇿" },
+};
+
+const ENGLISH_SPEAKING = new Set([
+  "United Kingdom","United States","Canada","Australia","New Zealand","Ireland",
+  "Nigeria","Ghana","Kenya","South Africa","Jamaica","Uganda","Rwanda","Singapore","India","Pakistan",
+]);
+
+function buildRecommendations(p: Pending): { work: Card[]; study: Card[]; scholarship: Card[]; pr: Card[] } {
+  const goal = p.main_goal ?? "";
+  const interests = p.countries_of_interest ?? [];
+  const worldwide = interests.length === 0 || interests.includes("Other");
+  const targetCountries = worldwide
+    ? ["Canada", "Australia", "Germany", "United Kingdom", "Ireland", "United States", "New Zealand"]
+    : interests.filter((c) => c !== "Other");
+
+  const profession = p.profession ?? p.occupation ?? "";
+  const qualification = p.qualification ?? "";
+  const nationality = p.nationality ?? "";
+  const isEnglishNative = ENGLISH_SPEAKING.has(nationality);
+  const isEnglishCountry = (c: string) => ENGLISH_SPEAKING.has(c);
+  const hasDegree = ["Bachelor's Degree", "Master's Degree", "PhD"].includes(qualification);
+  const isAdvanced = ["Master's Degree", "PhD"].includes(qualification);
+
+  const score = (base: number, adjustments: number[]) =>
+    Math.max(45, Math.min(97, Math.round(adjustments.reduce((a, b) => a + b, base))));
+
+  const professionFit = (country: string): { pts: number; text: string } => {
+    const p = profession || "your background";
+    return { pts: profession ? 8 : 0, text: `${p} background` };
+  };
+
+  const langCheck = (country: string) => {
+    const ok = isEnglishNative || isEnglishCountry(country) || ["Germany"].includes(country) === false;
+    if (isEnglishCountry(country) && !isEnglishNative) {
+      return { ok: false, text: "English language test required (IELTS / PTE)" };
+    }
+    if (country === "Germany") {
+      return { ok: false, text: "German language proficiency (B1+) recommended" };
+    }
+    return { ok: true, text: "Language requirement met" };
+  };
+
+  const credentialCheck = (country: string) => {
+    if (!hasDegree) return { ok: false, text: "Credential assessment required" };
+    if (["Canada", "Australia", "New Zealand"].includes(country)) {
+      return { ok: false, text: "Credential assessment (ECA / VETASSESS) required" };
+    }
+    if (country === "Germany") return { ok: false, text: "Anabin recognition required" };
+    return { ok: true, text: "Qualification recognised" };
+  };
+
+  const workCard = (country: string): Card => {
+    const fit = professionFit(country);
+    const lang = langCheck(country);
+    const cred = credentialCheck(country);
+    const s = score(70, [hasDegree ? 8 : -5, isAdvanced ? 4 : 0, fit.pts, lang.ok ? 3 : -4, cred.ok ? 4 : -3]);
+    return {
+      id: `work-${country.toLowerCase().replace(/\s+/g, "-")}`,
+      kind: "work",
+      flag: COUNTRY_META[country]?.flag,
+      country,
+      title: `Work in ${country}`,
+      tagline: profession
+        ? `${country} is actively hiring ${profession.toLowerCase()} professionals${p.country_of_residence ? ` from ${p.country_of_residence}` : ""} through employer-sponsored routes.`
+        : `${country} has employer-sponsored routes that may suit your background.`,
+      score: s,
+      reasons: [
+        { ok: !!qualification, text: qualification || "Qualification not provided" },
+        { ok: !!profession, text: fit.text },
+        cred,
+        lang,
+      ],
+    };
+  };
+
+  const studyCard = (country: string): Card => {
+    const lang = langCheck(country);
+    const s = score(72, [hasDegree ? 6 : 3, isAdvanced ? 5 : 0, lang.ok ? 4 : -3]);
+    return {
+      id: `study-${country.toLowerCase().replace(/\s+/g, "-")}`,
+      kind: "study",
+      flag: COUNTRY_META[country]?.flag,
+      country,
+      title: `Study in ${country}`,
+      tagline: `${country} offers ${isAdvanced ? "postgraduate" : "undergraduate and postgraduate"} programmes${profession ? ` in ${profession.toLowerCase()}` : ""} with post-study work rights.`,
+      score: s,
+      reasons: [
+        { ok: !!qualification, text: qualification ? `${qualification} accepted for entry` : "Qualification not provided" },
+        { ok: true, text: "Post-study work visa available" },
+        lang,
+        { ok: false, text: "Proof of funds required" },
+      ],
+    };
+  };
+
+  const prCard = (country: string): Card => {
+    const lang = langCheck(country);
+    const cred = credentialCheck(country);
+    const s = score(68, [hasDegree ? 10 : -6, isAdvanced ? 5 : 0, profession ? 5 : 0, lang.ok ? 3 : -4, cred.ok ? 3 : -3]);
+    return {
+      id: `pr-${country.toLowerCase().replace(/\s+/g, "-")}`,
+      kind: "pr",
+      flag: COUNTRY_META[country]?.flag,
+      country,
+      title: `Permanent Residence in ${country}`,
+      tagline: `${country} offers a points-based pathway to permanent residence${profession ? ` for skilled ${profession.toLowerCase()} professionals` : ""}${qualification ? ` with a ${qualification.toLowerCase()}` : ""}.`,
+      score: s,
+      reasons: [
+        { ok: !!qualification, text: qualification || "Qualification not provided" },
+        { ok: !!profession, text: profession ? `${profession} on skilled occupation lists` : "Profession not provided" },
+        cred,
+        lang,
+      ],
+    };
+  };
+
+  const scholarshipCard = (country: string): Card => {
+    const s = score(74, [isAdvanced ? 8 : hasDegree ? 4 : -2, profession ? 3 : 0]);
+    return {
+      id: `sch-${country.toLowerCase().replace(/\s+/g, "-")}`,
+      kind: "scholarship",
+      flag: COUNTRY_META[country]?.flag,
+      country,
+      title: `Scholarships in ${country}`,
+      tagline: `Government and university-funded scholarships in ${country}${profession ? ` for ${profession.toLowerCase()} candidates` : ""}${isAdvanced ? " at postgraduate level" : ""}.`,
+      score: s,
+      reasons: [
+        { ok: hasDegree, text: hasDegree ? `${qualification} meets typical eligibility` : "Bachelor's minimum usually required" },
+        { ok: true, text: `Open to ${nationality || "your nationality"}` },
+        { ok: false, text: "Competitive — strong academic record needed" },
+        { ok: false, text: "Application deadlines apply" },
+      ],
+    };
+  };
+
+  const work = targetCountries.map(workCard).sort((a, b) => b.score - a.score);
+  const study = targetCountries.map(studyCard).sort((a, b) => b.score - a.score);
+  const pr = targetCountries.map(prCard).sort((a, b) => b.score - a.score);
+  const scholarship = targetCountries.slice(0, 3).map(scholarshipCard).sort((a, b) => b.score - a.score);
+
+  return { work, study, scholarship, pr };
+}
 
 function Results() {
   const navigate = useNavigate();
@@ -70,10 +208,33 @@ function Results() {
 
   const highlightedCountries = useMemo(() => {
     const set = new Set<string>();
-    ["Canada", "Germany", "Australia", "Ireland"].forEach((c) => set.add(c));
-    pending?.countries_of_interest?.forEach((c) => set.add(c));
+    const interests = pending?.countries_of_interest ?? [];
+    if (interests.length === 0 || interests.includes("Other")) {
+      ["Canada", "Germany", "Australia", "Ireland", "United Kingdom", "United States", "New Zealand"].forEach((c) => set.add(c));
+    }
+    interests.filter((c) => c !== "Other").forEach((c) => set.add(c));
     return set;
   }, [pending]);
+
+  const recs = useMemo(() => buildRecommendations(pending ?? {}), [pending]);
+  const goal = pending?.main_goal ?? "";
+
+  // Goal-driven ordering
+  const sections = useMemo(() => {
+    const S = {
+      pr: { icon: <Home className="h-4 w-4" />, title: "Permanent Residence", subtitle: "Long-term settlement pathways matched to your profile.", cards: recs.pr },
+      work: { icon: <Briefcase className="h-4 w-4" />, title: "Work", subtitle: "Employer-sponsored routes where your profile may fit.", cards: recs.work },
+      study: { icon: <GraduationCap className="h-4 w-4" />, title: "Study", subtitle: "Study pathways aligned with your qualification.", cards: recs.study },
+      scholarship: { icon: <Award className="h-4 w-4" />, title: "Scholarships", subtitle: "Funding opportunities worth exploring.", cards: recs.scholarship },
+    };
+    switch (goal) {
+      case "Permanent Residence": return [S.pr];
+      case "Work Abroad": return [S.work];
+      case "Study Abroad": return [S.study];
+      case "Scholarships": return [S.scholarship];
+      default: return [S.pr, S.work, S.study, S.scholarship];
+    }
+  }, [goal, recs]);
 
   return (
     <div className="min-h-screen" style={{ background: C.bg, color: C.text }}>
@@ -114,27 +275,16 @@ function Results() {
 
       {/* SECTIONS */}
       <div className="mx-auto max-w-6xl px-6 pb-24 pt-8">
-        <Section
-          icon={<Briefcase className="h-4 w-4" />}
-          title="Work"
-          subtitle="Countries where your profile may fit employment opportunities."
-          cards={WORK}
-          onOpen={(id) => navigate({ to: "/journey/$id", params: { id } })}
-        />
-        <Section
-          icon={<GraduationCap className="h-4 w-4" />}
-          title="Study"
-          subtitle="Countries where your profile may fit study opportunities."
-          cards={STUDY}
-          onOpen={(id) => navigate({ to: "/journey/$id", params: { id } })}
-        />
-        <Section
-          icon={<Award className="h-4 w-4" />}
-          title="Scholarships"
-          subtitle="Funding opportunities worth exploring."
-          cards={SCHOLARSHIPS}
-          onOpen={(id) => navigate({ to: "/journey/$id", params: { id } })}
-        />
+        {sections.map((s) => (
+          <Section
+            key={s.title}
+            icon={s.icon}
+            title={s.title}
+            subtitle={s.subtitle}
+            cards={s.cards}
+            onOpen={(id) => navigate({ to: "/journey/$id", params: { id } })}
+          />
+        ))}
 
         {/* BOTTOM CTA */}
         <div
@@ -160,7 +310,7 @@ function Results() {
               variant="ghost"
               size="lg"
               onClick={() => {
-                const el = document.getElementById("work-section");
+                const el = document.querySelector<HTMLElement>("[data-results-section]");
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
               className="h-12 rounded-full px-7 text-base font-medium hover:bg-transparent"
@@ -189,7 +339,7 @@ function Section({
   onOpen: (id: string) => void;
 }) {
   return (
-    <section id={`${title.toLowerCase()}-section`} className="mt-14 scroll-mt-24">
+    <section data-results-section id={`${title.toLowerCase().replace(/\s+/g, "-")}-section`} className="mt-14 scroll-mt-24">
       <div className="flex items-center gap-2">
         <span
           className="inline-flex h-8 w-8 items-center justify-center rounded-full"
@@ -223,7 +373,10 @@ function OpportunityCard({
   onOpen: () => void;
 }) {
   const typeLabel =
-    card.kind === "work" ? "Work" : card.kind === "study" ? "Study" : "Scholarship";
+    card.kind === "work" ? "Work" :
+    card.kind === "study" ? "Study" :
+    card.kind === "pr" ? "Permanent Residence" : "Scholarship";
+  const scoreColor = card.score >= 80 ? C.success : card.score >= 65 ? C.primary : C.muted;
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -257,22 +410,30 @@ function OpportunityCard({
             </div>
           </div>
         </div>
-        {card.matchStrength && (
-          <span
-            className="rounded-full px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em]"
-            style={{
-              background: card.matchStrength === "Strong Match" ? "#ECFDF5" : C.bg2,
-              color: card.matchStrength === "Strong Match" ? C.success : C.primary,
-            }}
-          >
-            {card.matchStrength}
-          </span>
-        )}
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-[0.16em]" style={{ color: C.muted }}>Compatibility</div>
+          <div className="text-lg font-semibold leading-tight" style={{ color: scoreColor }}>
+            {card.score}<span className="text-xs font-medium" style={{ color: C.muted }}>/100</span>
+          </div>
+        </div>
       </div>
 
       <p className="mt-5 text-sm leading-relaxed" style={{ color: C.muted }}>
         {card.tagline}
       </p>
+
+      <ul className="mt-4 space-y-1.5">
+        {card.reasons.map((r, i) => (
+          <li key={i} className="flex items-start gap-2 text-[13px] leading-snug" style={{ color: r.ok ? C.text : C.muted }}>
+            {r.ok ? (
+              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: C.success }} strokeWidth={3} />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#D97706" }} />
+            )}
+            <span>{r.text}</span>
+          </li>
+        ))}
+      </ul>
 
       <div className="mt-6 flex items-center justify-between border-t pt-4" style={{ borderColor: "#F0ECF9" }}>
         <div>
