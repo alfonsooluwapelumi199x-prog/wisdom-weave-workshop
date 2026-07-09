@@ -77,18 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Pelumi — International Opportunity Finder" },
+      { title: "ForMe — Find the opportunities made for you." },
       {
         name: "description",
         content:
-          "Discover scholarships, sponsored jobs, and skilled worker pathways abroad — personalized to your profile with AI.",
+          "Create one profile and discover international opportunities that match your education, experience, skills and goals. Personalised. Global. Yours.",
       },
-      { name: "author", content: "Pelumi" },
-      { property: "og:title", content: "Pelumi — International Opportunity Finder" },
+      { name: "author", content: "ForMe" },
+      { property: "og:title", content: "ForMe — Find the opportunities made for you." },
       {
         property: "og:description",
         content:
-          "Personalized international opportunities: scholarships, sponsored jobs, and visa pathways.",
+          "One profile. A world of opportunities matched to who you are.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
