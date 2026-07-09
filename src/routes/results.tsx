@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export const Route = createFileRoute("/_authenticated/results")({
+export const Route = createFileRoute("/results")({
   head: () => ({ meta: [{ title: "Your Opportunities · ForMe" }] }),
   component: Results,
 });

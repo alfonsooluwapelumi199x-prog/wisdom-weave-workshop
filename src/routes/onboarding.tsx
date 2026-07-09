@@ -33,7 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Globe } from "@/components/marketing/globe";
 
-export const Route = createFileRoute("/_authenticated/onboarding")({
+export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Build your profile · ForMe" }] }),
   component: Onboarding,
 });

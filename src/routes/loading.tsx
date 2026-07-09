@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Globe } from "@/components/marketing/globe";
 
-export const Route = createFileRoute("/_authenticated/loading")({
+export const Route = createFileRoute("/loading")({
   head: () => ({ meta: [{ title: "Searching · ForMe" }] }),
   component: DiscoveryExperience,
 });
