@@ -27,8 +27,6 @@ import {
   Compass,
   Pencil,
 } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { saveOnboarding } from "@/lib/profile.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Globe } from "@/components/marketing/globe";
@@ -107,7 +105,6 @@ const TOTAL_QUESTIONS = 6;
 
 function Onboarding() {
   const navigate = useNavigate();
-  const save = useServerFn(saveOnboarding);
   // step: 0 = intro, 1..6 = questions, 7 = review
   const [step, setStep] = useState(0);
   const [ans, setAns] = useState<Answers>(EMPTY);
@@ -134,16 +131,15 @@ function Onboarding() {
   const submit = async () => {
     setSubmitting(true);
     try {
-      await save({
-        data: {
-          country_of_residence: ans.country_of_residence,
-          nationality: ans.nationality,
-          qualification: ans.qualification,
-          occupation: ans.profession,
-          main_goal: ans.main_goal,
-          countries_of_interest: ans.countries_of_interest,
-        },
-      });
+      const pending = {
+        country_of_residence: ans.country_of_residence,
+        nationality: ans.nationality,
+        qualification: ans.qualification,
+        occupation: ans.profession,
+        main_goal: ans.main_goal,
+        countries_of_interest: ans.countries_of_interest,
+      };
+      localStorage.setItem("forme.pending_profile", JSON.stringify(pending));
       navigate({ to: "/loading" });
     } catch (err) {
       toast.error((err as Error).message);
