@@ -3,14 +3,11 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const OnboardingSchema = z.object({
-  full_name: z.string().min(1).max(120),
-  age: z.number().int().min(13).max(100),
-  nationality: z.string().min(1).max(80),
   country_of_residence: z.string().min(1).max(80),
+  nationality: z.string().min(1).max(80),
   qualification: z.string().min(1).max(120),
   occupation: z.string().min(1).max(120),
-  years_experience: z.number().int().min(0).max(60),
-  marital_status: z.string().min(1).max(40),
+  main_goal: z.string().min(1).max(80),
   countries_of_interest: z.array(z.string()).min(1).max(10),
 });
 
