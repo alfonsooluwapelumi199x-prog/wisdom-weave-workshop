@@ -28,9 +28,7 @@ export const Route = createFileRoute("/auth")({
 
 const PENDING_KEY = "forme.pending_profile";
 
-type SaveFn = (args: { data: Parameters<typeof saveOnboarding>[0]["data"] }) => Promise<unknown>;
-
-async function persistPending(save: SaveFn) {
+async function persistPending(save: (args: { data: unknown }) => Promise<unknown>) {
   try {
     const raw = typeof window !== "undefined" ? localStorage.getItem(PENDING_KEY) : null;
     if (!raw) return;
@@ -51,7 +49,7 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
 
   const finish = async () => {
-    await persistPending(save as unknown as SaveFn);
+    await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
     navigate({ to: "/dashboard" });
   };
 
