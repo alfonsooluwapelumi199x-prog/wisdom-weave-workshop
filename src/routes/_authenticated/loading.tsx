@@ -65,7 +65,7 @@ function DiscoveryExperience() {
     const t = setTimeout(() => {
       if (stepIndex === STEPS.length - 1) {
         setExiting(true);
-        setTimeout(() => navigate({ to: "/dashboard" }), 900);
+        setTimeout(() => navigate({ to: "/results" }), 900);
       } else {
         setStepIndex((i) => i + 1);
       }
