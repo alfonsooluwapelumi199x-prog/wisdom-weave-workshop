@@ -1,71 +1,64 @@
+# Sprint 3 — The Discovery Experience
 
-# Premium Lilac Rebrand + Hero Elevation
+Scope: only the transition between finishing onboarding and the (future) results page. Rework `src/routes/_authenticated/loading.tsx` and extend `src/components/marketing/globe.tsx` with a new "discovery" mode. No results page, no palette changes elsewhere, no new dependencies.
 
-Scope: only `src/styles.css`, `src/routes/index.tsx` (hero section), and `src/components/marketing/globe.tsx`. No new sections, no other routes touched.
+## 1. Globe: new `discovery` mode (`src/components/marketing/globe.tsx`)
 
-## 1. Color system (src/styles.css)
+Add an optional `mode?: "hero" | "discovery"` prop (default `"hero"`), keeping current hero behaviour untouched.
 
-Replace the current teal/cyan tokens with the new lilac palette, keeping `oklch()` format and the `@theme inline` mapping intact.
+In `discovery` mode:
 
-New semantic tokens (both `:root` and `.dark` — identical, dark-only app):
+- Expand the pin dataset to ~24 real cities across every continent (Toronto, Vancouver, New York, Mexico City, São Paulo, Buenos Aires, London, Dublin, Paris, Amsterdam, Berlin, Stockholm, Lagos, Accra, Nairobi, Johannesburg, Dubai, Doha, Singapore, Tokyo, Seoul, Sydney, Melbourne, Auckland). Each has approximate `(cx, cy)` on the 480px SVG and a `continent` tag.
+- Rolling illumination: on a ~2.2s interval, pick 3–4 pins to be "active" (violet glow + expanding ring), the rest are dim lilac dots. Stagger so the world always has motion somewhere.
+- Floating city labels: at any time render 5–6 labels near their pins, `text-[11px] uppercase tracking-[0.2em] text-foreground/55` with a small violet dot. Each label fades in (0.8s), holds ~3s, fades out; new ones take their place, so names appear/disappear naturally as the globe rotates.
+- Curved arcs: keep the existing arc system but sample from the wider pin list; 4 arcs animating in staggered loops.
+- Particles: bump to ~22, tint mix of lilac and soft white (`var(--lilac)` and `var(--soft-white)`), slower duration.
+- "Final selection" phase (driven by a new `focusPins?: string[]` prop): pins in `focusPins` stay fully illuminated (violet glow, larger ring), all others gently fade to ~15% opacity over 1.2s. Labels outside the focus set fade out; focus-set labels stay pinned.
+- All colors use existing tokens (`--violet`, `--lilac`, `--soft-white`). No blue/cyan/teal.
 
-- `--background` → Deep Midnight Navy `#08111F`
-- `--foreground` → Soft White `#F8FAFC`
-- `--card` / `--popover` → slightly lifted midnight
-- `--primary` → Soft Lilac `#C8B6FF` (replaces electric teal)
-- `--primary-foreground` → midnight
-- `--secondary` / `--accent` → Lavender Purple `#A78BFA`
-- `--ring` → Soft Lilac
-- `--emerald` → `#10B981` (kept, success only)
-- New: `--violet` → Soft Violet `#8B5CF6` (glow), `--lilac` → `#C8B6FF`, `--lavender` → `#A78BFA`
-- Remove/retire: turquoise/cyan usages; `--gold` kept but unused in the hero
-- Add gradient + shadow tokens:
-  - `--gradient-primary`: `linear-gradient(135deg, var(--lavender), var(--violet))`
-  - `--gradient-hero`: radial midnight → violet-tinted midnight
-  - `--shadow-premium`: soft violet glow shadow used by CTA + globe
+## 2. Loading route redesign (`src/routes/_authenticated/loading.tsx`)
 
-Register the new colors in `@theme inline` (`--color-lilac`, `--color-lavender`, `--color-violet`) so utilities like `bg-lilac`, `text-lavender` work.
+Full-screen premium experience, dark, calm.
 
-## 2. Globe upgrades (src/components/marketing/globe.tsx)
+Layout:
 
-Recolor and animate:
+- Full-viewport dark container with a soft radial violet gradient background and a large blurred violet orb behind the globe. No card, no chrome.
+- Centered globe at ~min(78vmin, 720px) — much larger than hero. `Globe mode="discovery"` fills the screen.
+- Below the globe: message text + milestone dots. Above (or top-left corner on desktop): tiny "ForMe" wordmark, muted.
 
-- Swap cyan/teal SVG gradients (`pinGlow`, meridian stroke, halo) to lilac + violet. Central glow uses violet at core → lilac mid → transparent edge.
-- Increase pin count from current few to ~9 pulsing pins on plausible destination coords; each pin: small lilac dot + expanding lilac ring (`animate` opacity/scale, staggered delays, 3–4s cycle) — calm, not flashy.
-- Add 3 subtle curved arc lines (SVG paths with `strokeDasharray` + animated `strokeDashoffset`) connecting pins, drawn with lilac at ~25% opacity.
-- Increase orbiting particle count slightly, tint lilac.
-- Keep continuous rotation (existing meridian rotation), same slow speed.
+State machine (single `useEffect` with `setTimeout` chain, cleaned up on unmount):
 
-Props unchanged; still accepts `compact` and `highlighted`.
+| Step | Duration | Message                                             | Dots        | Extra                              |
+| ---- | -------- | --------------------------------------------------- | ----------- | ---------------------------------- |
+| 1    | 3s       | Searching the world for opportunities made for you… | ● ○ ○ ○     | globe in default discovery motion  |
+| 2    | 3s       | Understanding your profile…                         | ● ● ○ ○     |                                    |
+| 3    | 3s       | Finding your strongest matches…                     | ● ● ● ○     | begin narrowing: `focusPins` = 8   |
+| 4    | 3s       | Building your personalised journey…                 | ● ● ● ●     | `focusPins` narrows to 5 (Canada, Germany, Australia, Ireland, United Kingdom, New Zealand, Sweden — pick 5) |
+| 5    | 2s       | We found opportunities waiting for you.             | ● ● ● ●     | full-screen fade to background     |
 
-## 3. Hero section (src/routes/index.tsx → `Hero`)
+- Total ~14s. After step 5, `navigate({ to: "/dashboard" })` (existing placeholder destination — Sprint 4 will replace).
+- Messages crossfade with framer-motion (`AnimatePresence`, 0.6s opacity + 6px y). One message on screen at a time.
+- Milestone dots: 4 circles, filled = `var(--violet)` with a soft glow, empty = 1px lilac ring at 30% opacity. Fill transitions animate width/opacity, no bounce.
+- No percentage, no spinner, no "Loading". No skip button; entry is via onboarding completion.
+- Respect `prefers-reduced-motion`: disable particle/arc animation, keep static illuminated globe and message crossfade only.
 
-Layout stays 2-column on desktop, globe on right. Refinements:
+## 3. Onboarding hookup
 
-- Background: add a soft radial gradient behind the whole hero (violet at ~8% opacity, top-center) plus a large blurred violet orb behind the globe (`bg-violet/20 blur-[140px]`). Remove teal/emerald orbs from hero.
-- Text block spacing:
-  - Eyebrow gap tightened, larger `mt-8` between h1 and tagline, `mt-6` before supporting copy.
-  - Headline: keep "Welcome to ForMe" with gradient on "ForMe" using lilac → violet.
-  - Tagline (light, 2xl): "Find the opportunities made for you."
-  - Supporting line (muted): "One profile. Personalised opportunities. Clear next steps."
-  - New trust line under supporting copy, small caps or muted italic:
-    - "Not an immigration agency. Not a job board. A discovery platform built around you."
-- CTAs:
-  - Primary "Get Started" — uses `--gradient-primary` background, soft violet drop shadow, subtle inner highlight, hover lift.
-  - Secondary "See how it works" — ghost with lilac hover ring/border.
-- Under the globe (or globe column, bottom-centered): a small animated status line:
-  - Small pulsing lilac dot + text "Searching the world for opportunities made for you…"
-  - Uses framer-motion opacity pulse (2s ease), not a spinner.
-- Add subtle labels floating around the globe: Canada, Germany, Australia, Ireland, Sweden. Absolutely positioned around the globe container at approximate compass positions, `text-[11px] uppercase tracking-[0.2em] text-foreground/50`, with a tiny lilac dot before each label. Fade-in staggered on mount.
+`src/routes/_authenticated/onboarding.tsx` already routes to `/loading` on submit — leave as-is. Verify the redirect target is `/loading` and adjust only if it isn't.
 
-Nav, other sections (SectionTwo–Five, Footer) untouched aside from inheriting new tokens.
+## 4. Palette guardrail
+
+Audit the two touched files for any residual blue/cyan/teal literal (`#0ea5e9`, `cyan-*`, `sky-*`, `teal-*`, `turquoise`, `oklch(... 220-240)` hue). Replace with lilac/violet/soft-white tokens. Do not touch other files' palettes in this sprint.
 
 ## Out of scope
 
-- No changes to other sections, no new routes, no auth/backend changes.
-- Gold token stays defined but unused in hero; other sections continue to reference it.
-- No new dependencies.
+- Results page / recommendations engine (Sprint 4).
+- Landing page, onboarding steps, auth, database.
+- New dependencies, new routes, dashboard changes.
 
 ## Verification
 
-After edits: reload preview, confirm hero renders with lilac palette, globe glows violet, labels + status line visible, CTAs show gradient + shadow, no console/build errors.
+- Navigate onboarding → Discover My Opportunities → `/loading`.
+- Confirm: globe fills screen, cities from every continent light up in rotation, labels appear/disappear, 4 messages crossfade in order, dots progress ●○○○ → ●●●●, final message shows, then fade + navigation to `/dashboard`.
+- No blue/cyan anywhere; only lilac, violet, soft white on midnight.
+- No console/build errors; reduced-motion still readable.

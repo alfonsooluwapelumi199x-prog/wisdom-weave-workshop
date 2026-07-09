@@ -1,9 +1,9 @@
-import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 
 type Pin = { name: string; cx: number; cy: number; delay: number };
 
-const DEFAULT_PINS: Pin[] = [
+const HERO_PINS: Pin[] = [
   { name: "Canada", cx: 130, cy: 150, delay: 0 },
   { name: "USA", cx: 155, cy: 195, delay: 0.4 },
   { name: "Ireland", cx: 232, cy: 148, delay: 0.8 },
@@ -16,12 +16,49 @@ const DEFAULT_PINS: Pin[] = [
   { name: "Brazil", cx: 180, cy: 285, delay: 3.6 },
 ];
 
-const ARCS: [string, string][] = [
+// Approximate equirectangular projection onto 480x480 SVG (world band cy 90..390)
+const DISCOVERY_PINS: Pin[] = [
+  { name: "Toronto", cx: 138, cy: 165, delay: 0 },
+  { name: "Vancouver", cx: 108, cy: 158, delay: 0.3 },
+  { name: "New York", cx: 152, cy: 178, delay: 0.6 },
+  { name: "Mexico City", cx: 138, cy: 220, delay: 0.9 },
+  { name: "São Paulo", cx: 195, cy: 285, delay: 1.2 },
+  { name: "Buenos Aires", cx: 188, cy: 320, delay: 1.5 },
+  { name: "London", cx: 236, cy: 152, delay: 1.8 },
+  { name: "Dublin", cx: 228, cy: 150, delay: 2.1 },
+  { name: "Paris", cx: 240, cy: 160, delay: 2.4 },
+  { name: "Amsterdam", cx: 244, cy: 148, delay: 2.7 },
+  { name: "Berlin", cx: 254, cy: 150, delay: 3.0 },
+  { name: "Stockholm", cx: 262, cy: 128, delay: 3.3 },
+  { name: "Lagos", cx: 244, cy: 248, delay: 3.6 },
+  { name: "Accra", cx: 236, cy: 244, delay: 3.9 },
+  { name: "Nairobi", cx: 284, cy: 262, delay: 4.2 },
+  { name: "Johannesburg", cx: 274, cy: 305, delay: 4.5 },
+  { name: "Dubai", cx: 302, cy: 208, delay: 4.8 },
+  { name: "Doha", cx: 296, cy: 210, delay: 5.1 },
+  { name: "Singapore", cx: 358, cy: 252, delay: 5.4 },
+  { name: "Tokyo", cx: 396, cy: 182, delay: 5.7 },
+  { name: "Seoul", cx: 384, cy: 178, delay: 6.0 },
+  { name: "Sydney", cx: 400, cy: 312, delay: 6.3 },
+  { name: "Melbourne", cx: 392, cy: 322, delay: 6.6 },
+  { name: "Auckland", cx: 432, cy: 320, delay: 6.9 },
+];
+
+const HERO_ARCS: [string, string][] = [
   ["Canada", "Germany"],
   ["USA", "Singapore"],
   ["Brazil", "Ireland"],
   ["Sweden", "Japan"],
   ["Germany", "Australia"],
+];
+
+const DISCOVERY_ARCS: [string, string][] = [
+  ["Toronto", "London"],
+  ["São Paulo", "Lagos"],
+  ["Stockholm", "Tokyo"],
+  ["Dubai", "Sydney"],
+  ["New York", "Paris"],
+  ["Johannesburg", "Auckland"],
 ];
 
 function arcPath(a: Pin, b: Pin) {
@@ -42,11 +79,18 @@ function arcPath(a: Pin, b: Pin) {
 export function Globe({
   compact = false,
   highlighted,
+  mode = "hero",
+  focusPins,
 }: {
   compact?: boolean;
   highlighted?: string[];
+  mode?: "hero" | "discovery";
+  focusPins?: string[];
 }) {
   const size = 480;
+  const isDiscovery = mode === "discovery";
+  const PINS = isDiscovery ? DISCOVERY_PINS : HERO_PINS;
+  const ARCS = isDiscovery ? DISCOVERY_ARCS : HERO_ARCS;
   const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 20;
@@ -56,10 +100,62 @@ export function Globe({
   const lons = useMemo(() => [0, 30, 60, 90, 120, 150], []);
 
   // Particles orbiting
+  const particleCount = isDiscovery ? 22 : 14;
   const particles = useMemo(
-    () => Array.from({ length: 14 }).map((_, i) => ({ i, delay: i * 0.7, dur: 8 + (i % 4) * 2 })),
-    [],
+    () =>
+      Array.from({ length: particleCount }).map((_, i) => ({
+        i,
+        delay: i * 0.7,
+        dur: (isDiscovery ? 12 : 8) + (i % 4) * 2,
+        color: i % 3 === 0 ? "var(--soft-white)" : "var(--lilac)",
+      })),
+    [particleCount, isDiscovery],
   );
+
+  // Rolling illumination for discovery mode: rotate a small "active" subset
+  const [activeSet, setActiveSet] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isDiscovery) return;
+    let idx = 0;
+    const pick = () => {
+      const names = PINS.map((p) => p.name);
+      const next = new Set<string>();
+      for (let k = 0; k < 4; k++) next.add(names[(idx + k * 5) % names.length]);
+      idx = (idx + 3) % names.length;
+      setActiveSet(next);
+    };
+    pick();
+    const id = setInterval(pick, 2200);
+    return () => clearInterval(id);
+  }, [isDiscovery, PINS]);
+
+  // Rolling floating labels (5-6 at a time, fade in/out)
+  const [visibleLabels, setVisibleLabels] = useState<string[]>([]);
+  useEffect(() => {
+    if (!isDiscovery) return;
+    let idx = 0;
+    const rotate = () => {
+      const names = PINS.map((p) => p.name);
+      const next: string[] = [];
+      for (let k = 0; k < 6; k++) next.push(names[(idx + k * 4) % names.length]);
+      idx = (idx + 2) % names.length;
+      setVisibleLabels(next);
+    };
+    rotate();
+    const id = setInterval(rotate, 2600);
+    return () => clearInterval(id);
+  }, [isDiscovery, PINS]);
+
+  const focusSet = useMemo(
+    () => (focusPins && focusPins.length ? new Set(focusPins) : null),
+    [focusPins],
+  );
+
+  const labelsToShow = isDiscovery
+    ? focusSet
+      ? PINS.filter((p) => focusSet.has(p.name))
+      : PINS.filter((p) => visibleLabels.includes(p.name))
+    : [];
 
   return (
     <div className="relative h-full w-full">
@@ -165,22 +261,26 @@ export function Globe({
 
         {/* Arcs connecting pins */}
         {ARCS.map(([a, b], i) => {
-          const pa = DEFAULT_PINS.find((p) => p.name === a);
-          const pb = DEFAULT_PINS.find((p) => p.name === b);
+          const pa = PINS.find((p) => p.name === a);
+          const pb = PINS.find((p) => p.name === b);
           if (!pa || !pb) return null;
+          const dimmed = focusSet && !(focusSet.has(a) && focusSet.has(b));
           return (
             <motion.path
               key={`arc-${i}`}
               d={arcPath(pa, pb)}
               fill="none"
               stroke="url(#arcStroke)"
-              strokeWidth="1"
+              strokeWidth={isDiscovery ? 1.2 : 1}
               strokeLinecap="round"
               strokeDasharray="4 8"
               initial={{ opacity: 0, strokeDashoffset: 60 }}
-              animate={{ opacity: [0, 0.9, 0], strokeDashoffset: [60, 0] }}
+              animate={{
+                opacity: dimmed ? 0.05 : [0, 0.9, 0],
+                strokeDashoffset: [60, 0],
+              }}
               transition={{
-                duration: 6,
+                duration: isDiscovery ? 8 : 6,
                 delay: i * 1.1,
                 repeat: Infinity,
                 ease: "easeInOut",
@@ -190,24 +290,39 @@ export function Globe({
         })}
 
         {/* Pins */}
-        {DEFAULT_PINS.map((p) => {
+        {PINS.map((p) => {
           const isHighlighted = highlighted?.includes(p.name);
-          const glow = isHighlighted ? "url(#pinVioletGlow)" : "url(#pinGlow)";
-          const dot = isHighlighted ? "var(--violet)" : "var(--lilac)";
+          const isFocused = focusSet ? focusSet.has(p.name) : false;
+          const isActive = isDiscovery && (activeSet.has(p.name) || isFocused);
+          const dim = focusSet && !isFocused ? 0.12 : 1;
+          const glow = isActive || isHighlighted ? "url(#pinVioletGlow)" : "url(#pinGlow)";
+          const dot = isActive || isHighlighted ? "var(--violet)" : "var(--lilac)";
+          const baseR = isFocused ? 22 : isActive ? 18 : isHighlighted ? 18 : 14;
           return (
-            <g key={p.name}>
+            <motion.g
+              key={p.name}
+              animate={{ opacity: dim }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
+            >
               <motion.circle
                 cx={p.cx}
                 cy={p.cy}
-                r={isHighlighted ? 18 : 14}
+                r={baseR}
                 fill={glow}
-                animate={{ opacity: [0.15, 0.85, 0.15], scale: [0.7, 1.35, 0.7] }}
-                transition={{ duration: 4, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
+                animate={{
+                  opacity: isActive ? [0.3, 0.95, 0.3] : [0.1, 0.5, 0.1],
+                  scale: isActive ? [0.8, 1.5, 0.8] : [0.7, 1.15, 0.7],
+                }}
+                transition={{
+                  duration: isActive ? 3 : 4,
+                  delay: p.delay % 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
                 style={{ transformOrigin: `${p.cx}px ${p.cy}px` }}
               />
-              <circle cx={p.cx} cy={p.cy} r={2.2} fill={dot} />
-              {isHighlighted && !compact ? null : null}
-            </g>
+              <circle cx={p.cx} cy={p.cy} r={isFocused ? 3 : 2.2} fill={dot} />
+            </motion.g>
           );
         })}
 
@@ -224,7 +339,7 @@ export function Globe({
             <motion.circle
               key={`pt-${p.i}`}
               r={1.2}
-              fill="var(--lilac)"
+              fill={p.color}
               initial={{ cx: x1, cy: y1, opacity: 0 }}
               animate={{ cx: [x1, x2], cy: [y1, y2], opacity: [0, 0.9, 0] }}
               transition={{ duration: p.dur, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
@@ -232,6 +347,41 @@ export function Globe({
           );
         })}
       </svg>
+
+      {/* Floating city labels (discovery mode) */}
+      {isDiscovery ? (
+        <div className="pointer-events-none absolute inset-0">
+          <AnimatePresence>
+            {labelsToShow.map((p) => {
+              const leftPct = (p.cx / size) * 100;
+              const topPct = (p.cy / size) * 100;
+              return (
+                <motion.div
+                  key={p.name}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute flex items-center gap-1.5"
+                  style={{
+                    left: `${leftPct}%`,
+                    top: `${topPct}%`,
+                    transform: "translate(10px, -50%)",
+                  }}
+                >
+                  <span
+                    className="inline-block h-1 w-1 rounded-full"
+                    style={{ background: "var(--violet)", boxShadow: "0 0 8px var(--violet)" }}
+                  />
+                  <span className="text-[10px] uppercase tracking-[0.22em] text-foreground/60">
+                    {p.name}
+                  </span>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      ) : null}
     </div>
   );
 }
