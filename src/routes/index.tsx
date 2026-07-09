@@ -51,7 +51,7 @@ function Nav() {
           <Link to="/auth">
             <Button variant="ghost" size="sm" className="rounded-full">Sign in</Button>
           </Link>
-          <Link to="/auth">
+          <Link to="/onboarding">
             <Button size="sm" className="rounded-full px-4">Get Started</Button>
           </Link>
         </nav>
@@ -128,7 +128,7 @@ function Hero() {
             transition={{ duration: 0.8, delay: 0.45 }}
             className="mt-10 flex flex-wrap items-center gap-3"
           >
-            <Link to="/auth">
+            <Link to="/onboarding">
               <Button
                 size="lg"
                 className="group relative h-12 overflow-hidden rounded-full border-0 px-7 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
