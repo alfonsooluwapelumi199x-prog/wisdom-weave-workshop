@@ -1,86 +1,71 @@
-# Pelumi Opportunity Finder — Build Plan
 
-An AI SaaS that helps users discover international opportunities (scholarships, sponsored jobs, skilled worker & study pathways) with personalized matching, document generation, and tracking.
+# Premium Lilac Rebrand + Hero Elevation
 
-## Stack adaptation
+Scope: only `src/styles.css`, `src/routes/index.tsx` (hero section), and `src/components/marketing/globe.tsx`. No new sections, no other routes touched.
 
-The PRD specifies Next.js, but this project runs **TanStack Start + React 19**. I'll adapt:
-- **Next.js → TanStack Start** (same SSR/routing capabilities)
-- **Supabase → Lovable Cloud** (managed Supabase, same features)
-- **OpenAI → Lovable AI Gateway** (Gemini/GPT models, no key setup)
-- **Stripe** → deferred to Phase 4 (needs user Stripe account)
-- **Resend** → deferred to Phase 4 (needs API key)
-- Tailwind + shadcn/ui + Framer Motion ✅ already available
+## 1. Color system (src/styles.css)
 
-## Design direction
+Replace the current teal/cyan tokens with the new lilac palette, keeping `oklch()` format and the `@theme inline` mapping intact.
 
-Apple-inspired, minimal, dark-mode default. Inter font, soft shadows, rounded cards, subtle motion. I'll build one cohesive dark theme with a single restrained accent (not generic purple) — leaning toward a warm gold or deep teal to feel premium and distinct from typical AI SaaS.
+New semantic tokens (both `:root` and `.dark` — identical, dark-only app):
 
-## Phase 1 — Foundation, Auth, Onboarding, AI Chat
+- `--background` → Deep Midnight Navy `#08111F`
+- `--foreground` → Soft White `#F8FAFC`
+- `--card` / `--popover` → slightly lifted midnight
+- `--primary` → Soft Lilac `#C8B6FF` (replaces electric teal)
+- `--primary-foreground` → midnight
+- `--secondary` / `--accent` → Lavender Purple `#A78BFA`
+- `--ring` → Soft Lilac
+- `--emerald` → `#10B981` (kept, success only)
+- New: `--violet` → Soft Violet `#8B5CF6` (glow), `--lilac` → `#C8B6FF`, `--lavender` → `#A78BFA`
+- Remove/retire: turquoise/cyan usages; `--gold` kept but unused in the hero
+- Add gradient + shadow tokens:
+  - `--gradient-primary`: `linear-gradient(135deg, var(--lavender), var(--violet))`
+  - `--gradient-hero`: radial midnight → violet-tinted midnight
+  - `--shadow-premium`: soft violet glow shadow used by CTA + globe
 
-**Cloud enable**: turn on Lovable Cloud (auth + DB + AI Gateway).
+Register the new colors in `@theme inline` (`--color-lilac`, `--color-lavender`, `--color-violet`) so utilities like `bg-lilac`, `text-lavender` work.
 
-**Schema** (with GRANTs + RLS):
-- `profiles` (id, age, nationality, country_of_residence, qualification, occupation, years_experience, marital_status, countries_of_interest[], onboarding_complete)
-- `user_roles` + `has_role()` (admin/user, standard pattern)
-- `conversations`, `messages` (AI chat history)
+## 2. Globe upgrades (src/components/marketing/globe.tsx)
 
-**Routes**:
-- `/` — marketing landing (hero, features, CTA)
-- `/auth` — email/password sign in/up
-- `/_authenticated/` layout with sidebar nav
-- `/onboarding` — one-question-at-a-time wizard (8 steps), progress indicator, animated transitions
-- `/dashboard` — after onboarding, shows Profile Summary + AI-generated Opportunities Worth Exploring, Why It Fits, Next Steps, Official Resources
-- `/chat` — streaming AI chat with system prompt (opportunity advisor persona, disclaimer)
+Recolor and animate:
 
-**Server functions**:
-- `generateProfileInsights` — calls AI Gateway with profile, returns structured summary + opportunities
-- `chatWithAI` — streaming chat endpoint
-- Educational disclaimer + "never guarantee eligibility" baked into system prompt
+- Swap cyan/teal SVG gradients (`pinGlow`, meridian stroke, halo) to lilac + violet. Central glow uses violet at core → lilac mid → transparent edge.
+- Increase pin count from current few to ~9 pulsing pins on plausible destination coords; each pin: small lilac dot + expanding lilac ring (`animate` opacity/scale, staggered delays, 3–4s cycle) — calm, not flashy.
+- Add 3 subtle curved arc lines (SVG paths with `strokeDasharray` + animated `strokeDashoffset`) connecting pins, drawn with lilac at ~25% opacity.
+- Increase orbiting particle count slightly, tint lilac.
+- Keep continuous rotation (existing meridian rotation), same slow speed.
 
-## Phase 2 — Opportunities
+Props unchanged; still accepts `compact` and `highlighted`.
 
-**Schema**: `countries`, `opportunities`, `scholarships`, `employers` (sponsorship), `saved_items`, `applications` (tracker).
+## 3. Hero section (src/routes/index.tsx → `Hero`)
 
-**Routes**:
-- `/opportunities` — unified browse/filter (type, country, deadline)
-- `/scholarships` — dedicated finder with filters
-- `/sponsorship` — visa-sponsoring employer finder
-- `/countries/$slug` — country explorer (pathways, cost of living, visa options)
-- `/tracker` — kanban-style (Interested → Applied → Interview → Decision)
+Layout stays 2-column on desktop, globe on right. Refinements:
 
-Seed initial data via migration for a handful of countries/scholarships/employers so it's usable day 1. AI can enrich/explain matches per profile.
+- Background: add a soft radial gradient behind the whole hero (violet at ~8% opacity, top-center) plus a large blurred violet orb behind the globe (`bg-violet/20 blur-[140px]`). Remove teal/emerald orbs from hero.
+- Text block spacing:
+  - Eyebrow gap tightened, larger `mt-8` between h1 and tagline, `mt-6` before supporting copy.
+  - Headline: keep "Welcome to ForMe" with gradient on "ForMe" using lilac → violet.
+  - Tagline (light, 2xl): "Find the opportunities made for you."
+  - Supporting line (muted): "One profile. Personalised opportunities. Clear next steps."
+  - New trust line under supporting copy, small caps or muted italic:
+    - "Not an immigration agency. Not a job board. A discovery platform built around you."
+- CTAs:
+  - Primary "Get Started" — uses `--gradient-primary` background, soft violet drop shadow, subtle inner highlight, hover lift.
+  - Secondary "See how it works" — ghost with lilac hover ring/border.
+- Under the globe (or globe column, bottom-centered): a small animated status line:
+  - Small pulsing lilac dot + text "Searching the world for opportunities made for you…"
+  - Uses framer-motion opacity pulse (2s ease), not a spinner.
+- Add subtle labels floating around the globe: Canada, Germany, Australia, Ireland, Sweden. Absolutely positioned around the globe container at approximate compass positions, `text-[11px] uppercase tracking-[0.2em] text-foreground/50`, with a tiny lilac dot before each label. Fade-in staggered on mount.
 
-## Phase 3 — Document Generation
+Nav, other sections (SectionTwo–Five, Footer) untouched aside from inheriting new tokens.
 
-**Schema**: `documents` (resume/cover_letter, JSON content, versions).
+## Out of scope
 
-**Routes**:
-- `/resume` — resume builder with AI drafting from profile, live preview, export
-- `/cover-letter` — AI-generated per opportunity, tone controls
-- PDF export via jsPDF or html2pdf (client-side, Worker-safe)
+- No changes to other sections, no new routes, no auth/backend changes.
+- Gold token stays defined but unused in hero; other sections continue to reference it.
+- No new dependencies.
 
-## Phase 4 — Admin, Notifications, Payments, Analytics
+## Verification
 
-- **Admin CMS** `/admin/*` (role-gated): manage opportunities, scholarships, employers, countries, view feedback
-- **Notifications** table + in-app bell + optional Resend emails (asks user for API key)
-- **Subscriptions**: Stripe integration (free vs pro tier gating premium AI features) — asks user to connect Stripe
-- **Analytics**: simple dashboard using existing tracking
-
-## Technical details
-
-- Route architecture: separate files per section (not hash anchors), each with unique `head()` metadata for SEO
-- Auth-protected routes under `_authenticated/` layout with route gate
-- AI calls via `createServerFn` with `requireSupabaseAuth` middleware
-- All colors as semantic tokens in `src/styles.css` (no hardcoded hex in components)
-- Framer Motion for onboarding transitions, card hovers, page fades
-- Zod validation on all server function inputs
-
-## What ships when you approve
-
-Phase 1 end-to-end: landing, auth, onboarding wizard, AI-personalized dashboard, and AI chat — a working product you can use immediately. Then I'll proceed through Phases 2–4 in follow-up turns, checking with you before Stripe/Resend since those need your accounts.
-
-## Open questions before I build
-
-1. **Accent color**: warm gold (#D4A574-ish), deep teal, or something else?
-2. **Phase 1 only, or full plan through Phase 4** in this session (Phases 2–3 are safe to auto-continue; 4 needs your Stripe/Resend keys)?
+After edits: reload preview, confirm hero renders with lilac palette, globe glows violet, labels + status line visible, CTAs show gradient + shadow, no console/build errors.

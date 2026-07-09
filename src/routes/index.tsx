@@ -63,59 +63,91 @@ function Nav() {
 function Hero() {
   return (
     <section className="relative">
-      {/* Ambient gradients */}
+      {/* Ambient hero gradient */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/3 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[120px]" />
-        <div className="absolute top-40 right-0 h-[420px] w-[420px] rounded-full bg-emerald/10 blur-[120px]" />
-        <div className="absolute -bottom-20 left-0 h-[320px] w-[320px] rounded-full bg-gold/8 blur-[120px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,var(--violet),transparent_55%)] opacity-30" />
+        <div className="absolute -top-32 right-[8%] h-[560px] w-[560px] rounded-full bg-violet/20 blur-[140px]" />
+        <div className="absolute top-1/2 left-[-10%] h-[420px] w-[420px] rounded-full bg-lavender/10 blur-[140px]" />
       </div>
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-6 pt-16 pb-24 lg:grid-cols-12 lg:gap-4 lg:pt-24 lg:pb-32">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-6 pt-20 pb-28 lg:grid-cols-12 lg:gap-8 lg:pt-28 lg:pb-36">
         {/* Copy */}
         <div className="lg:col-span-6">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-foreground/60 backdrop-blur-sm"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-lilac shadow-[0_0_10px_var(--lilac)]" />
+            A discovery platform for you
+          </motion.div>
+
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.2, 0.8, 0.2, 1] }}
-            className="text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl"
+            transition={{ duration: 0.9, delay: 0.05, ease: [0.2, 0.8, 0.2, 1] }}
+            className="mt-6 text-balance text-5xl font-semibold leading-[1.02] tracking-[-0.02em] sm:text-6xl lg:text-[5.25rem]"
           >
             Welcome to{" "}
-            <span className="bg-gradient-to-r from-soft-white via-primary to-emerald bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-soft-white via-lilac to-lavender bg-clip-text text-transparent">
               ForMe
             </span>
           </motion.h1>
+
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="mt-6 text-2xl font-light text-foreground/90 sm:text-3xl"
+            transition={{ duration: 0.8, delay: 0.15 }}
+            className="mt-8 text-2xl font-light leading-snug text-foreground/90 sm:text-[1.75rem]"
           >
             Find the opportunities made for you.
           </motion.p>
+
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mt-8 max-w-xl text-base leading-relaxed text-muted-foreground"
+            transition={{ duration: 0.8, delay: 0.25 }}
+            className="mt-6 max-w-lg text-[15px] leading-relaxed text-muted-foreground"
           >
-            Create one profile. Discover opportunities around the world that match your
-            education, experience, skills and goals. No endless searching. No guesswork.
-            Just personalised opportunities and clear next steps.
+            One profile. Personalised opportunities. Clear next steps.
           </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.35 }}
+            className="mt-6 max-w-lg border-l border-lilac/25 pl-4 text-[13px] italic leading-relaxed text-foreground/55"
+          >
+            Not an immigration agency. Not a job board. A discovery platform built around you.
+          </motion.p>
+
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            transition={{ duration: 0.8, delay: 0.45 }}
             className="mt-10 flex flex-wrap items-center gap-3"
           >
             <Link to="/auth">
-              <Button size="lg" className="group h-12 rounded-full px-6 text-base font-medium shadow-[0_10px_40px_-10px_var(--primary)] transition-transform hover:-translate-y-0.5">
-                Get Started
-                <span aria-hidden className="ml-1 transition-transform group-hover:translate-x-0.5">→</span>
+              <Button
+                size="lg"
+                className="group relative h-12 overflow-hidden rounded-full border-0 px-7 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
+                style={{
+                  backgroundImage: "var(--gradient-primary)",
+                  boxShadow: "var(--shadow-premium)",
+                }}
+              >
+                <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/20 to-transparent opacity-60" />
+                <span className="relative">Get Started</span>
+                <span aria-hidden className="relative ml-1.5 transition-transform group-hover:translate-x-0.5">→</span>
               </Button>
             </Link>
             <a href="#how">
-              <Button size="lg" variant="ghost" className="h-12 rounded-full px-6 text-base font-medium text-foreground/80 hover:bg-white/5">
+              <Button
+                size="lg"
+                variant="ghost"
+                className="h-12 rounded-full border border-white/10 px-6 text-base font-medium text-foreground/85 hover:border-lilac/40 hover:bg-white/[0.04] hover:text-foreground"
+              >
                 See how it works
               </Button>
             </a>
@@ -128,9 +160,45 @@ function Hero() {
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.2, delay: 0.2, ease: [0.2, 0.8, 0.2, 1] }}
-            className="relative mx-auto aspect-square w-full max-w-[560px]"
+            className="relative mx-auto aspect-square w-full max-w-[580px]"
           >
             <Globe />
+
+            {/* Floating location labels */}
+            {[
+              { name: "Canada", pos: "top-[14%] left-[6%]" },
+              { name: "Sweden", pos: "top-[6%] left-[52%]" },
+              { name: "Ireland", pos: "top-[22%] left-[38%]" },
+              { name: "Germany", pos: "top-[38%] right-[8%]" },
+              { name: "Australia", pos: "bottom-[10%] right-[10%]" },
+            ].map((l, i) => (
+              <motion.div
+                key={l.name}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.9 + i * 0.15 }}
+                className={`absolute ${l.pos} flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-foreground/55`}
+              >
+                <span className="h-1 w-1 rounded-full bg-lilac shadow-[0_0_8px_var(--lilac)]" />
+                {l.name}
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Searching status */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, delay: 1.4 }}
+            className="mt-6 flex items-center justify-center gap-2.5 text-[12px] tracking-wide text-foreground/55"
+          >
+            <motion.span
+              className="h-1.5 w-1.5 rounded-full bg-lilac"
+              animate={{ opacity: [0.3, 1, 0.3], scale: [0.9, 1.15, 0.9] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+              style={{ boxShadow: "0 0 12px var(--lilac)" }}
+            />
+            Searching the world for opportunities made for you…
           </motion.div>
         </div>
       </div>

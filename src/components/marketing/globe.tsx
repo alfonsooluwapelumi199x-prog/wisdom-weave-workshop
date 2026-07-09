@@ -5,13 +5,39 @@ type Pin = { name: string; cx: number; cy: number; delay: number };
 
 const DEFAULT_PINS: Pin[] = [
   { name: "Canada", cx: 130, cy: 150, delay: 0 },
-  { name: "Germany", cx: 260, cy: 155, delay: 0.6 },
-  { name: "Ireland", cx: 232, cy: 148, delay: 1.2 },
-  { name: "Sweden", cx: 265, cy: 130, delay: 1.8 },
-  { name: "Australia", cx: 355, cy: 300, delay: 2.4 },
-  { name: "Japan", cx: 380, cy: 180, delay: 3.0 },
-  { name: "Brazil", cx: 175, cy: 285, delay: 3.6 },
+  { name: "USA", cx: 155, cy: 195, delay: 0.4 },
+  { name: "Ireland", cx: 232, cy: 148, delay: 0.8 },
+  { name: "Sweden", cx: 265, cy: 128, delay: 1.2 },
+  { name: "Germany", cx: 258, cy: 158, delay: 1.6 },
+  { name: "UAE", cx: 300, cy: 210, delay: 2.0 },
+  { name: "Japan", cx: 380, cy: 180, delay: 2.4 },
+  { name: "Singapore", cx: 355, cy: 250, delay: 2.8 },
+  { name: "Australia", cx: 370, cy: 305, delay: 3.2 },
+  { name: "Brazil", cx: 180, cy: 285, delay: 3.6 },
 ];
+
+const ARCS: [string, string][] = [
+  ["Canada", "Germany"],
+  ["USA", "Singapore"],
+  ["Brazil", "Ireland"],
+  ["Sweden", "Japan"],
+  ["Germany", "Australia"],
+];
+
+function arcPath(a: Pin, b: Pin) {
+  const mx = (a.cx + b.cx) / 2;
+  const my = (a.cy + b.cy) / 2;
+  const dx = b.cx - a.cx;
+  const dy = b.cy - a.cy;
+  const dist = Math.hypot(dx, dy);
+  // perpendicular offset for a gentle curve
+  const nx = -dy / dist;
+  const ny = dx / dist;
+  const lift = Math.min(dist * 0.35, 90);
+  const cx = mx + nx * lift;
+  const cy = my + ny * lift;
+  return `M ${a.cx} ${a.cy} Q ${cx} ${cy} ${b.cx} ${b.cy}`;
+}
 
 export function Globe({
   compact = false,
@@ -38,7 +64,8 @@ export function Globe({
   return (
     <div className="relative h-full w-full">
       {/* Ambient glow behind globe */}
-      <div className="pointer-events-none absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_50%,var(--primary)/0.25,transparent_60%)] blur-2xl" />
+      <div className="pointer-events-none absolute inset-[-10%] rounded-full bg-[radial-gradient(circle_at_50%_50%,var(--violet)_0%,transparent_55%)] opacity-40 blur-3xl" />
+      <div className="pointer-events-none absolute inset-[5%] rounded-full bg-[radial-gradient(circle_at_50%_50%,var(--lilac)_0%,transparent_60%)] opacity-25 blur-2xl" />
 
       <svg
         viewBox={`0 0 ${size} ${size}`}
@@ -48,23 +75,28 @@ export function Globe({
       >
         <defs>
           <radialGradient id="sphere" cx="35%" cy="30%" r="75%">
-            <stop offset="0%" stopColor="oklch(0.32 0.06 220)" />
-            <stop offset="55%" stopColor="oklch(0.20 0.05 260)" />
-            <stop offset="100%" stopColor="oklch(0.10 0.04 260)" />
+            <stop offset="0%" stopColor="oklch(0.30 0.08 285)" />
+            <stop offset="55%" stopColor="oklch(0.18 0.045 270)" />
+            <stop offset="100%" stopColor="oklch(0.09 0.03 260)" />
           </radialGradient>
           <radialGradient id="rim" cx="50%" cy="50%" r="50%">
-            <stop offset="85%" stopColor="transparent" />
-            <stop offset="98%" stopColor="var(--primary)" stopOpacity="0.35" />
+            <stop offset="82%" stopColor="transparent" />
+            <stop offset="97%" stopColor="var(--lilac)" stopOpacity="0.45" />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
           <radialGradient id="pinGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+            <stop offset="0%" stopColor="var(--lilac)" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="var(--lilac)" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="pinGold" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="var(--gold)" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="var(--gold)" stopOpacity="0" />
+          <radialGradient id="pinVioletGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="var(--violet)" stopOpacity="0.9" />
+            <stop offset="100%" stopColor="var(--violet)" stopOpacity="0" />
           </radialGradient>
+          <linearGradient id="arcStroke" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="var(--lilac)" stopOpacity="0" />
+            <stop offset="50%" stopColor="var(--lilac)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--violet)" stopOpacity="0" />
+          </linearGradient>
           <clipPath id="clip">
             <circle cx={cx} cy={cy} r={r} />
           </clipPath>
@@ -88,7 +120,7 @@ export function Globe({
                 rx={rr}
                 ry={rr * 0.18}
                 fill="none"
-                stroke="oklch(0.78 0.15 195)"
+                stroke="var(--lilac)"
                 strokeOpacity="0.18"
                 strokeWidth="0.6"
               />
@@ -111,7 +143,7 @@ export function Globe({
                   rx={rx || 0.5}
                   ry={r}
                   fill="none"
-                  stroke="oklch(0.78 0.15 195)"
+                  stroke="var(--lilac)"
                   strokeOpacity="0.22"
                   strokeWidth="0.6"
                 />
@@ -126,28 +158,54 @@ export function Globe({
               const rad = Math.sqrt(i / 220) * r * 0.95;
               const x = cx + Math.cos(angle) * rad;
               const y = cy + Math.sin(angle) * rad * 0.9;
-              return <circle key={i} cx={x} cy={y} r={0.6} fill="oklch(0.78 0.15 195)" />;
+              return <circle key={i} cx={x} cy={y} r={0.6} fill="var(--lilac)" />;
             })}
           </g>
         </g>
 
+        {/* Arcs connecting pins */}
+        {ARCS.map(([a, b], i) => {
+          const pa = DEFAULT_PINS.find((p) => p.name === a);
+          const pb = DEFAULT_PINS.find((p) => p.name === b);
+          if (!pa || !pb) return null;
+          return (
+            <motion.path
+              key={`arc-${i}`}
+              d={arcPath(pa, pb)}
+              fill="none"
+              stroke="url(#arcStroke)"
+              strokeWidth="1"
+              strokeLinecap="round"
+              strokeDasharray="4 8"
+              initial={{ opacity: 0, strokeDashoffset: 60 }}
+              animate={{ opacity: [0, 0.9, 0], strokeDashoffset: [60, 0] }}
+              transition={{
+                duration: 6,
+                delay: i * 1.1,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            />
+          );
+        })}
+
         {/* Pins */}
         {DEFAULT_PINS.map((p) => {
           const isHighlighted = highlighted?.includes(p.name);
-          const glow = isHighlighted ? "url(#pinGold)" : "url(#pinGlow)";
-          const dot = isHighlighted ? "var(--gold)" : "var(--primary)";
+          const glow = isHighlighted ? "url(#pinVioletGlow)" : "url(#pinGlow)";
+          const dot = isHighlighted ? "var(--violet)" : "var(--lilac)";
           return (
             <g key={p.name}>
               <motion.circle
                 cx={p.cx}
                 cy={p.cy}
-                r={14}
+                r={isHighlighted ? 18 : 14}
                 fill={glow}
-                animate={{ opacity: [0.2, 0.9, 0.2], scale: [0.8, 1.2, 0.8] }}
-                transition={{ duration: 3.5, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
+                animate={{ opacity: [0.15, 0.85, 0.15], scale: [0.7, 1.35, 0.7] }}
+                transition={{ duration: 4, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
                 style={{ transformOrigin: `${p.cx}px ${p.cy}px` }}
               />
-              <circle cx={p.cx} cy={p.cy} r={2.4} fill={dot} />
+              <circle cx={p.cx} cy={p.cy} r={2.2} fill={dot} />
               {isHighlighted && !compact ? null : null}
             </g>
           );
@@ -166,7 +224,7 @@ export function Globe({
             <motion.circle
               key={`pt-${p.i}`}
               r={1.2}
-              fill="var(--primary)"
+              fill="var(--lilac)"
               initial={{ cx: x1, cy: y1, opacity: 0 }}
               animate={{ cx: [x1, x2], cy: [y1, y2], opacity: [0, 0.9, 0] }}
               transition={{ duration: p.dur, delay: p.delay, repeat: Infinity, ease: "easeInOut" }}
