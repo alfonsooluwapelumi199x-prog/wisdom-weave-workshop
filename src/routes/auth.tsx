@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Save Your Journey · ForMe" },
+      { title: "Let's save your journey · ForMe" },
       {
         name: "description",
         content:
@@ -47,6 +47,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
 
   const finish = async () => {
     await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
@@ -92,6 +93,15 @@ function AuthPage() {
     await finish();
   };
 
+  const apple = async () => {
+    const res = await lovable.auth.signInWithOAuth("apple", {
+      redirect_uri: window.location.origin,
+    });
+    if (res.error) return toast.error(res.error.message);
+    if (res.redirected) return;
+    await finish();
+  };
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 text-foreground">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -109,20 +119,48 @@ function AuthPage() {
           Almost there
         </div>
         <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          Save Your Journey
+          Let's save your journey.
         </h1>
         <p className="mt-3 text-[14px] leading-relaxed text-foreground/65">
-          Create your free account to save your personalised opportunities, continue where you left off, and receive future opportunity updates.
+          We can only search the world for the best opportunities if we know more about you.
         </p>
+        <p className="mt-4 text-[13px] font-medium tracking-tight text-foreground/80">
+          Create your free account to:
+        </p>
+        <ul className="mt-3 space-y-1.5 text-[14px] leading-relaxed text-foreground/70">
+          <li>• Save your Opportunity Plan</li>
+          <li>• Continue where you left off</li>
+          <li>• Receive personalised opportunity updates</li>
+          <li>• Improve your recommendations over time</li>
+          <li>• Track your progress</li>
+        </ul>
 
-        <Button
-          variant="outline"
-          className="mt-8 h-12 w-full rounded-full border-white/15 bg-white/[0.04] text-base hover:bg-white/[0.08]"
-          onClick={google}
-        >
-          Continue with Google
-        </Button>
+        <div className="mt-8 space-y-3">
+          <Button
+            variant="outline"
+            className="h-12 w-full rounded-full border-white/15 bg-white/[0.04] text-base hover:bg-white/[0.08]"
+            onClick={google}
+          >
+            Continue with Google
+          </Button>
+          <Button
+            variant="outline"
+            className="h-12 w-full rounded-full border-white/15 bg-white/[0.04] text-base hover:bg-white/[0.08]"
+            onClick={apple}
+          >
+            Continue with Apple
+          </Button>
+          <Button
+            variant="outline"
+            className="h-12 w-full rounded-full border-white/15 bg-white/[0.04] text-base hover:bg-white/[0.08]"
+            onClick={() => setShowEmail((v) => !v)}
+          >
+            Continue with Email
+          </Button>
+        </div>
 
+        {showEmail && (
+        <>
         <div className="my-6 flex items-center gap-3 text-xs text-foreground/40">
           <div className="h-px flex-1 bg-white/10" />or<div className="h-px flex-1 bg-white/10" />
         </div>
@@ -172,6 +210,8 @@ function AuthPage() {
             </form>
           </TabsContent>
         </Tabs>
+        </>
+        )}
       </motion.div>
     </div>
   );
