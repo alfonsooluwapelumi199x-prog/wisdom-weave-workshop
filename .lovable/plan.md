@@ -1,56 +1,108 @@
+
 ## Goal
 
-Move authentication out of the front of the flow. Users should experience Build My Profile → Searching → Results with no login wall, and only sign in afterward to save their journey.
+Introduce a reusable ForMe component library and rework the Results page information hierarchy and recommendation logic — without redesigning existing screens, changing navigation, or altering the flow. Keep the current white + lilac palette.
 
-## New flow
+## Design tokens (centralised)
+
+Create `src/components/forme/tokens.ts` exporting the palette so every component pulls from one source:
+
+- `bg: #F7F4FF`, `card: #FFFFFF`, `primary: #8B5CF6`, `secondary: #C8B6FF`, `success: #10B981`, `warning: #D97706`, `text: #1E1E2E`, `muted: #6B7280`, `border: #EEEAF6`
+
+Remove any lingering blue/cyan values from `results.tsx` and `journey.$id.tsx` and swap to tokens. No other visual changes.
+
+## Reusable components (`src/components/forme/`)
+
+All components accept props only — nothing hardcoded to Canada / Express Entry / a specific opportunity.
+
+1. `CountryHeader.tsx` — `{ flag, countryName, opportunityName }` → flag + country + opportunity title stack.
+2. `CompatibilityCard.tsx` — `{ label, score?, reasons: {ok, text}[], mode: 'preliminary' | 'full' }`. In `preliminary` mode shows "Current Profile Fit" + reasons only (no % / circular indicator). In `full` mode shows a circular SVG indicator with score (kept for future when profile is complete).
+3. `WhyFitsCard.tsx` — `{ title?, points: string[] }`. Default title "Why this was recommended". Bulleted list, no generic text — caller supplies personalised strings.
+4. `NextActionCard.tsx` — `{ title, description?, ctaLabel, onCta }`. Large card, single primary button. Designed to sit near top of an Opportunity Plan.
+5. `JourneyTimeline.tsx` — `{ steps: { n, title, description, status: 'completed'|'in_progress'|'not_started'|'locked' }[] }`. Vertical timeline; highlights the single active (in_progress) step.
+6. `MilestoneTracker.tsx` — `{ milestones: { label, done }[] }`. Chip row with ✓ / ○. No percentages.
+7. `ResourceCard.tsx` — `{ title, description, href }`. External link card.
+8. `OpportunityCard.tsx` — `{ country, flag, opportunity, fit: {label, reasons}, nextAction, onView }`. Replaces the ad-hoc card in `results.tsx`.
+9. `EmptyState.tsx` — `{ title, description, action? }`.
+10. `Skeletons.tsx` — exports `OpportunityCardSkeleton`, `CompatibilityCardSkeleton`, `TimelineSkeleton`, `HeaderSkeleton`. Elegant shimmer using existing palette.
+
+Plus a small `ImproveRecommendationCard.tsx` (used at bottom of a recommendation) with fixed copy: "Improve Your Recommendation — Complete your profile to receive a more accurate compatibility assessment and personalised action plan." Uses existing profile route as CTA.
+
+## Results page hierarchy (`src/routes/results.tsx`)
+
+Keep the current layout, globe, and section grid. Only reorder the top of the page and swap in the new components:
+
+New top section (above the pathway grid), when a country and goal are known:
 
 ```
-Landing (/)
-  → Get Started
-Build My Profile (/onboarding)         [PUBLIC]
-  → 6 questions → Review → Discover My Opportunities
-Searching the World (/loading)         [PUBLIC]
-Results (/results)                     [PUBLIC — placeholder]
-  → Save Your Journey
-Auth (/auth)                           [PUBLIC — repositioned]
-  → after sign-in, persist stashed profile
-My World Dashboard (/dashboard)        [PROTECTED — minimal placeholder]
+[Globe — highlights ONLY the selected country if exactly one is chosen]
+
+<CountryHeader flag="🇨🇦" countryName="Canada" opportunityName="Permanent Residence Pathways" />
+
+<CompatibilityCard mode="preliminary" label="Current Profile Fit"
+  reasons={[
+    { ok: true, text: "Your selected goal is Permanent Residence." },
+    { ok: true, text: "Your education aligns with this opportunity." },
+    { ok: true, text: "Your profession may align with this pathway." },
+  ]} />
+
+<WhyFitsCard points={[ ...same personalised bullets, profile-derived only ]} />
 ```
 
-## Changes
+Then the existing pathway sections (rendered via new `OpportunityCard`).
 
-**1. Make onboarding + loading + results public**
-- Move the three route files out of `src/routes/_authenticated/` to `src/routes/onboarding.tsx`, `src/routes/loading.tsx`, `src/routes/results.tsx` (update the `createFileRoute` path in each).
-- Answers are stored in `localStorage` under a single key (`forme.pending_profile`) at the end of onboarding, instead of being sent to the server. The rest of the onboarding UI stays exactly as it is (same questions, same design, same review screen, same Discover My Opportunities button).
-- `/loading` reads nothing from the server — same animation, same timing, then navigates to `/results`.
-- `/results` reads the pending profile from `localStorage` and shows the existing placeholder ("Your personalised journey is being prepared"). Primary CTA changes to **Save Your Journey** → navigates to `/auth?next=/dashboard`.
+At the bottom of the recommendation area (above the existing "Save My Journey" CTA), add `<ImproveRecommendationCard />`.
 
-**2. Reposition and rebrand the auth screen (`/auth`)**
-- Heading: **Save Your Journey**
-- Subheading: *Create your free account to save your personalised opportunities, continue where you left off, and receive future opportunity updates.*
-- Keep Continue with Google. Keep email/password. Same ForMe visual language (midnight background, lilac accents).
-- After a successful sign-in/sign-up, if `localStorage` has a pending profile, save it via the existing `saveOnboarding` server function, clear the key, then navigate to `/dashboard`. If none exists, navigate straight to `/dashboard`.
-- Remove the auto-redirect that fires when the page loads with an existing session — signed-in users landing here from Results should still get the "save your journey" hand-off; only the post-submit navigation should redirect.
+Title behaviour:
+- Single country + single goal selected → `CountryHeader` uses that country and `"<Goal> Pathways"` (e.g. "Permanent Residence Pathways").
+- Multiple / worldwide → keep existing "We searched the world for you." header, skip `CountryHeader`, still show `CompatibilityCard` + `WhyFitsCard` scoped to the goal.
 
-**3. My World Dashboard (`/dashboard`)**
-- Currently redirects to `/results`. Replace with a minimal placeholder page under `_authenticated/` so it remains protected: greeting + one line ("Your personalised opportunities are coming soon") + sign-out affordance already in AppShell. No visa cards, no AI Chat, no long briefing paragraphs, no Lithuania content — all already removed.
+Globe rule change: `highlightedCountries` = the user's actually-selected countries only. If "Discover Worldwide" / none, keep current worldwide behaviour.
 
-**4. Landing page**
-- No visual changes. Confirm Get Started still points to `/onboarding` (it does).
+## Recommendation logic changes
 
-**5. Cleanup**
-- Delete the now-empty `/_authenticated/chat` redirect route (Chat is gone from the flow entirely).
-- `_authenticated` layout stays as-is, guarding only `/dashboard`.
+Rewrite `buildRecommendations` in `results.tsx` to use ONLY these fields:
+`country_of_residence, nationality, qualification, profession, main_goal, countries_of_interest`.
 
-## Out of scope
+Remove all references to:
+- age, years of experience, English language tests, IELTS/PTE, credential assessment, ECA/VETASSESS, Anabin, marital status, budget, licensing, proof of funds, German B1, etc.
 
-- Homepage redesign.
-- Real results/recommendations engine.
-- Any change to onboarding questions, copy, or visuals.
-- Any change to the Searching the World animation.
+Replace numeric compatibility score (82/100) with `Current Profile Fit` (no number) built from personalised, transparent reasons:
 
-## Technical notes
+- `✓ Your selected goal is <goal>.`
+- `✓ Your education (<qualification>) aligns with this opportunity.` (only if qualification present)
+- `✓ Your profession (<profession>) may align with this pathway.` (only if profession present)
+- `✓ <country> is one of your preferred destinations.` (only if in `countries_of_interest`)
+- Omit any bullet whose underlying field is missing — never fabricate.
 
-- Pending profile shape stored in `localStorage`: the same object currently passed to `saveOnboarding` (`country_of_residence`, `nationality`, `qualification`, `occupation`, `main_goal`, `countries_of_interest`).
-- `saveOnboarding` already requires auth via `requireSupabaseAuth`; it will be called only from `/auth` after sign-in succeeds, so it stays protected and the bearer middleware in `src/start.ts` continues to work.
-- File moves regenerate `src/routeTree.gen.ts` automatically — no manual edits there.
+Taglines rewritten to reference only known fields, e.g. `"${country} offers permanent residence pathways for people with your background."` — no invented requirements.
+
+`OpportunityCard` on the results grid shows: country, opportunity name, "Current Profile Fit" label, the same personalised reasons, a single "Next Action: View Journey" button. No percentages, no fabricated warnings.
+
+## Journey page (`src/routes/journey.$id.tsx`)
+
+Refactor to consume the new components (no visual redesign):
+- `CountryHeader` at top.
+- `NextActionCard` immediately below (single next step derived from opportunity + profile — for MVP: "View Journey" / "Explore this pathway" style, no fabricated requirements).
+- `JourneyTimeline` with generic, profile-safe steps per opportunity kind.
+- `MilestoneTracker` using only milestones we can support today (Education, Occupation, Preferred Country) — chips reflect what the profile already has.
+- `WhyFitsCard` with the same personalised bullets.
+- `ImproveRecommendationCard` at the bottom.
+
+No `ResourceCard` content yet — component exists in the library for later use; render an empty state slot on the journey page only if we have zero resources (uses `EmptyState`).
+
+## Non-goals / guardrails
+
+- No route changes, no navigation changes, no auth changes.
+- No changes to `onboarding.tsx`, `loading.tsx`, `auth.tsx`, `_authenticated/dashboard.tsx`, `__root.tsx`.
+- No new dependencies.
+- No hardcoded country/opportunity strings inside components — all via props.
+- Keep animations (framer-motion) and existing globe behaviour aside from the highlight rule.
+
+## Files touched
+
+- add: `src/components/forme/tokens.ts`
+- add: `src/components/forme/{CountryHeader,CompatibilityCard,WhyFitsCard,NextActionCard,JourneyTimeline,MilestoneTracker,ResourceCard,OpportunityCard,EmptyState,Skeletons,ImproveRecommendationCard}.tsx`
+- add: `src/components/forme/index.ts` (barrel)
+- edit: `src/routes/results.tsx` (hierarchy + recommendation logic + use new components)
+- edit: `src/routes/journey.$id.tsx` (consume new components; no visual redesign)
