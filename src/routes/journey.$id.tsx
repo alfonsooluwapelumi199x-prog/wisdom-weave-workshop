@@ -7,122 +7,84 @@ import {
   CountryHeader,
   NextActionCard,
   JourneyTimeline,
-  MilestoneTracker,
   WhyFitsCard,
   ImproveRecommendationCard,
+  ConfidenceCard,
+  OfficialResourceCard,
+  MistakesList,
   type TimelineStep,
 } from "@/components/forme";
 import { useEffect, useState } from "react";
+import {
+  parseJourneyId,
+  resolveBlueprint,
+  currentStep,
+  COUNTRY_FLAG,
+  type Pending,
+} from "@/lib/opportunity-plans";
 
 export const Route = createFileRoute("/journey/$id")({
   head: () => ({ meta: [{ title: "Your Journey · ForMe" }] }),
   component: JourneyPage,
 });
 
-type Pending = {
-  country_of_residence?: string;
-  nationality?: string;
-  qualification?: string;
-  profession?: string;
-  occupation?: string;
-  main_goal?: string;
-  countries_of_interest?: string[];
-};
-
-const COUNTRY_META: Record<string, { flag: string }> = {
-  Canada: { flag: "🇨🇦" },
-  Australia: { flag: "🇦🇺" },
-  Germany: { flag: "🇩🇪" },
-  "United Kingdom": { flag: "🇬🇧" },
-  Ireland: { flag: "🇮🇪" },
-  "United States": { flag: "🇺🇸" },
-  "New Zealand": { flag: "🇳🇿" },
-};
-
-const KIND_LABEL = {
-  pr: "Permanent Residence",
-  work: "Work",
-  study: "Study",
-  scholarship: "Scholarship",
-} as const;
-
-type Kind = keyof typeof KIND_LABEL;
-
-function parseId(id: string): { kind: Kind; country?: string } {
-  const [prefix, ...rest] = id.split("-");
-  const kind = (prefix === "pr" || prefix === "work" || prefix === "study" || prefix === "scholarship" || prefix === "sch")
-    ? (prefix === "sch" ? "scholarship" : (prefix as Kind))
-    : "work";
-  const slug = rest.join("-");
-  const country = Object.keys(COUNTRY_META).find(
-    (c) => c.toLowerCase().replace(/\s+/g, "-") === slug,
-  );
-  return { kind, country };
-}
-
-function buildTimeline(kind: Kind): TimelineStep[] {
-  switch (kind) {
-    case "pr":
-      return [
-        { n: 1, title: "Confirm your profile details", description: "Make sure your education and profession are up to date.", status: "in_progress" },
-        { n: 2, title: "Explore eligibility pathways", description: "Review the streams offered by this destination.", status: "not_started" },
-        { n: 3, title: "Prepare supporting documents", status: "not_started" },
-        { n: 4, title: "Submit expression of interest", status: "locked" },
-      ];
-    case "work":
-      return [
-        { n: 1, title: "Confirm your profile details", description: "Make sure your profession is up to date.", status: "in_progress" },
-        { n: 2, title: "Explore employer routes", status: "not_started" },
-        { n: 3, title: "Prepare CV for this market", status: "not_started" },
-        { n: 4, title: "Apply to opportunities", status: "locked" },
-      ];
-    case "study":
-      return [
-        { n: 1, title: "Confirm your qualification", status: "in_progress" },
-        { n: 2, title: "Shortlist programmes", status: "not_started" },
-        { n: 3, title: "Prepare application materials", status: "not_started" },
-        { n: 4, title: "Submit applications", status: "locked" },
-      ];
-    case "scholarship":
-      return [
-        { n: 1, title: "Confirm eligibility basics", status: "in_progress" },
-        { n: 2, title: "Shortlist scholarships", status: "not_started" },
-        { n: 3, title: "Prepare application materials", status: "not_started" },
-        { n: 4, title: "Submit applications", status: "locked" },
-      ];
-  }
-}
-
 function JourneyPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { kind, country } = parseId(id);
-  const flag = country ? COUNTRY_META[country]?.flag : undefined;
-  const opportunityName = country ? `${KIND_LABEL[kind]} in ${country}` : KIND_LABEL[kind];
+  const { kind, country } = parseJourneyId(id);
+  const blueprint = resolveBlueprint(kind, country);
+  const flag = country ? COUNTRY_FLAG[country] : undefined;
 
   const [pending, setPending] = useState<Pending | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string> | null>(null);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem("forme.pending_profile");
       if (raw) setPending(JSON.parse(raw));
     } catch { /* ignore */ }
-  }, []);
+    try {
+      const rawA = localStorage.getItem(`forme.journey_answers.${id}`);
+      if (rawA) setAnswers(JSON.parse(rawA));
+      else setAnswers(null);
+    } catch { /* ignore */ }
+  }, [id]);
 
-  const whyPoints: string[] = [];
-  if (pending?.main_goal) whyPoints.push(`Your selected goal is ${pending.main_goal}.`);
-  if (pending?.qualification) whyPoints.push(`Your education (${pending.qualification}) aligns with this opportunity.`);
-  const prof = pending?.profession ?? pending?.occupation;
-  if (prof) whyPoints.push(`Your profession (${prof}) may align with this pathway.`);
-  if (country && (pending?.countries_of_interest ?? []).includes(country))
-    whyPoints.push(`${country} is one of your preferred destinations.`);
+  // If personalisation hasn't been done yet AND this blueprint has questions,
+  // send the user through the personalisation flow first.
+  useEffect(() => {
+    if (blueprint.questions.length > 0 && answers === null) {
+      navigate({ to: "/journey/$id/personalise", params: { id }, replace: true });
+    }
+  }, [blueprint, answers, id, navigate]);
 
-  const milestones = [
-    { label: "Education", done: !!pending?.qualification },
-    { label: "Occupation", done: !!prof },
-    { label: "Preferred Country", done: country ? (pending?.countries_of_interest ?? []).includes(country) : false },
-  ];
+  const ctx = {
+    profile: pending ?? {},
+    answers: answers ?? {},
+    country,
+    kind,
+  };
 
-  const steps = buildTimeline(kind);
+  const whyPoints = blueprint.buildReasons(ctx);
+  const confidence = blueprint.deriveConfidence(ctx);
+  const statuses = blueprint.deriveStatuses(ctx);
+  const active = currentStep(blueprint, statuses);
+
+  const steps: TimelineStep[] = blueprint.steps.map((s, i) => ({
+    n: i + 1,
+    title: s.title,
+    description: s.description,
+    status: statuses[s.id] ?? "not_started",
+  }));
+
+  const scrollToResources = () => {
+    const el = document.querySelector<HTMLElement>("[data-resources-section]");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    else {
+      const first = active.resources?.[0];
+      if (first) window.open(first.url, "_blank", "noopener,noreferrer");
+    }
+  };
 
   return (
     <div className="min-h-screen" style={{ background: T.card, color: T.text }}>
@@ -145,33 +107,71 @@ function JourneyPage() {
           <CountryHeader
             flag={flag}
             countryName={country}
-            opportunityName={opportunityName}
-            eyebrow={KIND_LABEL[kind]}
+            opportunityName={blueprint.displayName}
+            eyebrow="Your Opportunity Plan"
           />
         </motion.div>
 
-        <NextActionCard
-          title="Confirm your profile details"
-          description="Review your profile so we can match you to the most relevant next step in this pathway."
-          ctaLabel="Start This Step"
-          onCta={() => navigate({ to: "/onboarding" })}
-        />
+        <ConfidenceCard level={confidence.level} note={confidence.note} />
 
         <WhyFitsCard points={whyPoints} />
 
-        <div
-          className="rounded-2xl p-6"
-          style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: "0 1px 2px rgba(30,30,46,0.04)" }}
-        >
-          <MilestoneTracker milestones={milestones} title="Milestones" />
-        </div>
-
         <div>
           <div className="mb-4 text-[11px] uppercase tracking-[0.2em]" style={{ color: T.muted }}>
-            Your journey
+            Your Opportunity Plan
           </div>
           <JourneyTimeline steps={steps} />
         </div>
+
+        <NextActionCard
+          eyebrow="Your Next Action"
+          title={active.title}
+          description={active.description}
+          ctaLabel="Start This Step"
+          onCta={scrollToResources}
+        />
+
+        {(active.estimatedTime || active.estimatedCost) && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {active.estimatedTime && (
+              <MetaCard label="Estimated Time" value={active.estimatedTime} />
+            )}
+            {active.estimatedCost && (
+              <MetaCard label="Estimated Cost" value={active.estimatedCost} />
+            )}
+          </div>
+        )}
+
+        {active.resources && active.resources.length > 0 && (
+          <div data-resources-section>
+            <div className="mb-4 text-[11px] uppercase tracking-[0.2em]" style={{ color: T.muted }}>
+              Official Resources
+            </div>
+            <div className="space-y-3">
+              {active.resources.map((r) => (
+                <OfficialResourceCard key={r.name} name={r.name} description={r.description} url={r.url} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {active.mistakes && active.mistakes.length > 0 && (
+          <MistakesList mistakes={active.mistakes} />
+        )}
+
+        {active.whatsNext && (
+          <div
+            className="rounded-2xl p-6"
+            style={{ background: T.surface, border: `1px solid ${T.border}` }}
+          >
+            <div className="text-[11px] uppercase tracking-[0.2em]" style={{ color: T.muted }}>
+              What's Next
+            </div>
+            <p className="mt-3 text-[15px] leading-relaxed" style={{ color: T.text }}>
+              {active.whatsNext}
+            </p>
+          </div>
+        )}
 
         <ImproveRecommendationCard onImprove={() => navigate({ to: "/onboarding" })} />
 
@@ -202,6 +202,22 @@ function JourneyPage() {
             </Button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MetaCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{ background: T.card, border: `1px solid ${T.border}`, boxShadow: "0 1px 2px rgba(30,30,46,0.04)" }}
+    >
+      <div className="text-[11px] uppercase tracking-[0.2em]" style={{ color: T.muted }}>
+        {label}
+      </div>
+      <div className="mt-2 text-lg font-semibold" style={{ color: T.text }}>
+        {value}
       </div>
     </div>
   );
