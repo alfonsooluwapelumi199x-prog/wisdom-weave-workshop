@@ -10,3 +10,6 @@ export * from "./OpportunityCard";
 export * from "./EmptyState";
 export * from "./Skeletons";
 export * from "./ImproveRecommendationCard";
+export * from "./ConfidenceCard";
+export * from "./OfficialResourceCard";
+export * from "./MistakesList";
