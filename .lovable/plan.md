@@ -1,108 +1,121 @@
-
 ## Goal
 
-Introduce a reusable ForMe component library and rework the Results page information hierarchy and recommendation logic — without redesigning existing screens, changing navigation, or altering the flow. Keep the current white + lilac palette.
+Build the "View Journey" experience: after tapping View Journey on the Results page, the user answers a short set of opportunity-specific personalisation questions (one per screen, conversational), then lands on a personalised Opportunity Plan. Existing UI, colours, typography, animations, navigation, landing, onboarding, and Results page stay untouched. Reuse the ForMe component library and white + lilac palette.
 
-## Design tokens (centralised)
+## User flow (unchanged upstream)
 
-Create `src/components/forme/tokens.ts` exporting the palette so every component pulls from one source:
+Results → View Journey → Personalisation Questions → Opportunity Plan
+Landing, onboarding, and Results are not modified.
 
-- `bg: #F7F4FF`, `card: #FFFFFF`, `primary: #8B5CF6`, `secondary: #C8B6FF`, `success: #10B981`, `warning: #D97706`, `text: #1E1E2E`, `muted: #6B7280`, `border: #EEEAF6`
+## Routes
 
-Remove any lingering blue/cyan values from `results.tsx` and `journey.$id.tsx` and swap to tokens. No other visual changes.
+- `src/routes/journey.$id.personalise.tsx` — new. One conversational question per screen. Progress bar. Header: "Let's make this plan yours. This will take less than one minute." Persists answers to `localStorage` (`forme.journey_answers.<id>`). On completion → `/journey/$id`.
+- `src/routes/journey.$id.tsx` — rewritten to be the Opportunity Plan (the current placeholder journey page is replaced, not redesigned in style — same tokens, same component library, same white/lilac aesthetic). If no personalisation answers exist yet for this id, redirect to `/journey/$id/personalise`.
+- Results page: only change is the `View Journey` button now routes into the personalisation flow via the same `/journey/$id` id (no navigation shape change — the id already exists). No visual change to Results.
 
-## Reusable components (`src/components/forme/`)
+## Opportunity model (reusable, no hardcoded country/pathway)
 
-All components accept props only — nothing hardcoded to Canada / Express Entry / a specific opportunity.
-
-1. `CountryHeader.tsx` — `{ flag, countryName, opportunityName }` → flag + country + opportunity title stack.
-2. `CompatibilityCard.tsx` — `{ label, score?, reasons: {ok, text}[], mode: 'preliminary' | 'full' }`. In `preliminary` mode shows "Current Profile Fit" + reasons only (no % / circular indicator). In `full` mode shows a circular SVG indicator with score (kept for future when profile is complete).
-3. `WhyFitsCard.tsx` — `{ title?, points: string[] }`. Default title "Why this was recommended". Bulleted list, no generic text — caller supplies personalised strings.
-4. `NextActionCard.tsx` — `{ title, description?, ctaLabel, onCta }`. Large card, single primary button. Designed to sit near top of an Opportunity Plan.
-5. `JourneyTimeline.tsx` — `{ steps: { n, title, description, status: 'completed'|'in_progress'|'not_started'|'locked' }[] }`. Vertical timeline; highlights the single active (in_progress) step.
-6. `MilestoneTracker.tsx` — `{ milestones: { label, done }[] }`. Chip row with ✓ / ○. No percentages.
-7. `ResourceCard.tsx` — `{ title, description, href }`. External link card.
-8. `OpportunityCard.tsx` — `{ country, flag, opportunity, fit: {label, reasons}, nextAction, onView }`. Replaces the ad-hoc card in `results.tsx`.
-9. `EmptyState.tsx` — `{ title, description, action? }`.
-10. `Skeletons.tsx` — exports `OpportunityCardSkeleton`, `CompatibilityCardSkeleton`, `TimelineSkeleton`, `HeaderSkeleton`. Elegant shimmer using existing palette.
-
-Plus a small `ImproveRecommendationCard.tsx` (used at bottom of a recommendation) with fixed copy: "Improve Your Recommendation — Complete your profile to receive a more accurate compatibility assessment and personalised action plan." Uses existing profile route as CTA.
-
-## Results page hierarchy (`src/routes/results.tsx`)
-
-Keep the current layout, globe, and section grid. Only reorder the top of the page and swap in the new components:
-
-New top section (above the pathway grid), when a country and goal are known:
+Add `src/lib/opportunity-plans.ts` — a pure data module the plan page consumes. Everything (questions, steps, resources, mistakes, timing, cost, what's next) is described per opportunity `kind` (`pr` | `work` | `study` | `scholarship`) and optionally per `country`. Structure:
 
 ```
-[Globe — highlights ONLY the selected country if exactly one is chosen]
+type Question = {
+  id: string;
+  prompt: string;
+  helper?: string;
+  options: { value: string; label: string }[];
+};
 
-<CountryHeader flag="🇨🇦" countryName="Canada" opportunityName="Permanent Residence Pathways" />
+type PlanStep = {
+  id: string;                 // e.g. "english_test"
+  title: string;              // "English language test"
+  description: string;
+  estimatedTime?: string;     // "2–6 weeks"
+  estimatedCost?: string;     // "£180–£250" — omitted if unreliable
+  resources?: Resource[];     // official orgs only
+  mistakes?: string[];        // max 3
+  whatsNext?: string;         // one line
+};
 
-<CompatibilityCard mode="preliminary" label="Current Profile Fit"
-  reasons={[
-    { ok: true, text: "Your selected goal is Permanent Residence." },
-    { ok: true, text: "Your education aligns with this opportunity." },
-    { ok: true, text: "Your profession may align with this pathway." },
-  ]} />
+type Resource = { name: string; description: string; url: string; official: true };
 
-<WhyFitsCard points={[ ...same personalised bullets, profile-derived only ]} />
+type OpportunityBlueprint = {
+  key: string;                          // `${kind}:${country ?? "*"}`
+  kind: "pr" | "work" | "study" | "scholarship";
+  country?: string;
+  displayName: string;                  // "Express Entry — Canada", "Skilled Worker Visa — UK", etc.
+  questions: Question[];                // ONLY what's needed for this opportunity
+  steps: PlanStep[];                    // ordered roadmap
+  // derives status from user's answers + profile, and picks the single current step
+  deriveStatuses: (ctx: PlanContext) => Record<string /* step.id */, "completed"|"in_progress"|"not_started"|"locked">;
+  // derives confidence from answers + profile
+  deriveConfidence: (ctx: PlanContext) => { level: "High"|"Medium"|"Low"; note?: string };
+  // personalised reasons (only from known info)
+  buildReasons: (ctx: PlanContext) => string[];
+};
 ```
 
-Then the existing pathway sections (rendered via new `OpportunityCard`).
+`PlanContext = { profile: Pending; answers: Record<string,string>; country?: string; kind: Kind }`.
 
-At the bottom of the recommendation area (above the existing "Save My Journey" CTA), add `<ImproveRecommendationCard />`.
+The registry resolves an id like `pr-canada` → blueprint. Seed blueprints:
 
-Title behaviour:
-- Single country + single goal selected → `CountryHeader` uses that country and `"<Goal> Pathways"` (e.g. "Permanent Residence Pathways").
-- Multiple / worldwide → keep existing "We searched the world for you." header, skip `CountryHeader`, still show `CompatibilityCard` + `WhyFitsCard` scoped to the goal.
+- `pr:Canada` (Express Entry): questions = English test status, work experience band, ECA status. Steps = Profile check → English test → ECA → Express Entry profile → Invitation → PR application.
+- `pr:*` (generic PR fallback): profile check → language test → credential recognition → application.
+- `work:*`: profile check → CV localisation → job search → application → offer/visa.
+- `study:*`: qualification check → shortlist programmes → application materials → applications → visa.
+- `scholarship:*`: eligibility → shortlist → materials → applications.
 
-Globe rule change: `highlightedCountries` = the user's actually-selected countries only. If "Discover Worldwide" / none, keep current worldwide behaviour.
+Only Canada PR ships with country-specific detail in this pass; every other combination falls back to a generic blueprint using the same schema, so the page is fully populated for any kind/country and adding new opportunities later is a data-only change. No new hardcoded strings inside the page component.
 
-## Recommendation logic changes
+## Personalisation screen (`journey.$id.personalise.tsx`)
 
-Rewrite `buildRecommendations` in `results.tsx` to use ONLY these fields:
-`country_of_residence, nationality, qualification, profession, main_goal, countries_of_interest`.
+- Reads `id`, resolves blueprint (`pr:Canada` → Canada PR; anything else → generic `<kind>:*`).
+- If blueprint has zero questions → skip straight to `/journey/$id`.
+- One question per screen, framer-motion transition matching existing style, progress dots at top, `Back` / `Next` buttons, uses existing `Button` + tokens.
+- Top eyebrow copy: "Let's make this plan yours." Sub: "This will take less than one minute."
+- Persists to `localStorage["forme.journey_answers." + id]`.
+- Final Next → navigate to `/journey/$id`.
 
-Remove all references to:
-- age, years of experience, English language tests, IELTS/PTE, credential assessment, ECA/VETASSESS, Anabin, marital status, budget, licensing, proof of funds, German B1, etc.
+## Opportunity Plan page (`journey.$id.tsx`)
 
-Replace numeric compatibility score (82/100) with `Current Profile Fit` (no number) built from personalised, transparent reasons:
+Reuses existing ForMe components and tokens — no new visual system. Sections top to bottom:
 
-- `✓ Your selected goal is <goal>.`
-- `✓ Your education (<qualification>) aligns with this opportunity.` (only if qualification present)
-- `✓ Your profession (<profession>) may align with this pathway.` (only if profession present)
-- `✓ <country> is one of your preferred destinations.` (only if in `countries_of_interest`)
-- Omit any bullet whose underlying field is missing — never fabricate.
+1. `CountryHeader` — flag + country + `blueprint.displayName` (falls back to opportunity title when country unknown, e.g. worldwide search).
+2. Opportunity Confidence card — new small component `ConfidenceCard` in `src/components/forme/` displaying `High` / `Medium` / `Low` chip + line "Based on the information you've shared so far." + optional note "Complete more of your profile to improve the accuracy of this recommendation." Uses existing tokens; no new palette.
+3. `WhyFitsCard` — points from `blueprint.buildReasons(ctx)`. Only uses profile + answers; never age/budget/marital/etc.
+4. Your Opportunity Plan — vertical roadmap via existing `JourneyTimeline`, with statuses from `deriveStatuses`. Exactly one step marked `in_progress`.
+5. Your Next Action — `NextActionCard`, large, single button. Title = current step's title; description = current step's description; CTA = "Start This Step" scrolling to the resources section (or opening the first official resource if present).
+6. Estimated Time — small card, `currentStep.estimatedTime` only. Hidden if unset.
+7. Estimated Cost — small card, `currentStep.estimatedCost` only. Hidden if unset.
+8. Official Resources — new component `OfficialResourceCard` (small extension of existing `ResourceCard`) rendering the current step's resources with an "Official" badge, description, and "Open Official Website" button. Only current step's resources shown.
+9. Common Mistakes — new small `MistakesList` component (tokens-based, no redesign) — max 3 items from `currentStep.mistakes`. Hidden if none.
+10. What's Next — plain card with `currentStep.whatsNext`, computed as "After completing <current>, your next step will be <next step title>." Auto-generated from the roadmap when the blueprint doesn't override.
+11. Save Progress — reuses the existing bottom CTA pattern from the current journey page (Save My Journey → `/auth`, Continue Exploring → `/results`). No visual redesign.
 
-Taglines rewritten to reference only known fields, e.g. `"${country} offers permanent residence pathways for people with your background."` — no invented requirements.
+Add `ImproveRecommendationCard` just above the save-progress block, unchanged.
 
-`OpportunityCard` on the results grid shows: country, opportunity name, "Current Profile Fit" label, the same personalised reasons, a single "Next Action: View Journey" button. No percentages, no fabricated warnings.
+## New / touched components (ForMe library)
 
-## Journey page (`src/routes/journey.$id.tsx`)
-
-Refactor to consume the new components (no visual redesign):
-- `CountryHeader` at top.
-- `NextActionCard` immediately below (single next step derived from opportunity + profile — for MVP: "View Journey" / "Explore this pathway" style, no fabricated requirements).
-- `JourneyTimeline` with generic, profile-safe steps per opportunity kind.
-- `MilestoneTracker` using only milestones we can support today (Education, Occupation, Preferred Country) — chips reflect what the profile already has.
-- `WhyFitsCard` with the same personalised bullets.
-- `ImproveRecommendationCard` at the bottom.
-
-No `ResourceCard` content yet — component exists in the library for later use; render an empty state slot on the journey page only if we have zero resources (uses `EmptyState`).
-
-## Non-goals / guardrails
-
-- No route changes, no navigation changes, no auth changes.
-- No changes to `onboarding.tsx`, `loading.tsx`, `auth.tsx`, `_authenticated/dashboard.tsx`, `__root.tsx`.
-- No new dependencies.
-- No hardcoded country/opportunity strings inside components — all via props.
-- Keep animations (framer-motion) and existing globe behaviour aside from the highlight rule.
+- add: `src/components/forme/ConfidenceCard.tsx`
+- add: `src/components/forme/OfficialResourceCard.tsx` (wraps existing `ResourceCard` styling; adds "Official" badge and CTA button label)
+- add: `src/components/forme/MistakesList.tsx`
+- export the three from `src/components/forme/index.ts`
+- no changes to existing components' props or visuals.
 
 ## Files touched
 
-- add: `src/components/forme/tokens.ts`
-- add: `src/components/forme/{CountryHeader,CompatibilityCard,WhyFitsCard,NextActionCard,JourneyTimeline,MilestoneTracker,ResourceCard,OpportunityCard,EmptyState,Skeletons,ImproveRecommendationCard}.tsx`
-- add: `src/components/forme/index.ts` (barrel)
-- edit: `src/routes/results.tsx` (hierarchy + recommendation logic + use new components)
-- edit: `src/routes/journey.$id.tsx` (consume new components; no visual redesign)
+- add: `src/routes/journey.$id.personalise.tsx`
+- edit: `src/routes/journey.$id.tsx` (replace body; keep tokens + component library)
+- add: `src/lib/opportunity-plans.ts`
+- add: `src/components/forme/ConfidenceCard.tsx`
+- add: `src/components/forme/OfficialResourceCard.tsx`
+- add: `src/components/forme/MistakesList.tsx`
+- edit: `src/components/forme/index.ts` (barrel exports)
+
+No changes to: landing, onboarding, loading, auth, dashboard, Results page UI, tokens, existing ForMe components, router, or `__root.tsx`.
+
+## Guardrails
+
+- No new dependencies.
+- Never fabricate user data (no assumed age, budget, marital, licensing, English scores) — reasons and confidence use only profile fields + personalisation answers.
+- Only the current step's resources / time / cost / mistakes are shown; other steps stay collapsed in the roadmap.
+- Fully reusable: any kind/country resolves to a blueprint (specific or generic) and populates the same page — no hardcoded Canada/Express Entry in the component.

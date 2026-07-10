@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as JourneyIdRouteImport } from './routes/journey.$id'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as JourneyIdPersonaliseRouteImport } from './routes/journey.$id.personalise'
 
 const ResultsRoute = ResultsRouteImport.update({
   id: '/results',
@@ -63,6 +64,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const JourneyIdPersonaliseRoute = JourneyIdPersonaliseRouteImport.update({
+  id: '/personalise',
+  path: '/personalise',
+  getParentRoute: () => JourneyIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,7 +78,8 @@ export interface FileRoutesByFullPath {
   '/results': typeof ResultsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/api/chat': typeof ApiChatRoute
-  '/journey/$id': typeof JourneyIdRoute
+  '/journey/$id': typeof JourneyIdRouteWithChildren
+  '/journey/$id/personalise': typeof JourneyIdPersonaliseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,7 +89,8 @@ export interface FileRoutesByTo {
   '/results': typeof ResultsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/api/chat': typeof ApiChatRoute
-  '/journey/$id': typeof JourneyIdRoute
+  '/journey/$id': typeof JourneyIdRouteWithChildren
+  '/journey/$id/personalise': typeof JourneyIdPersonaliseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,7 +102,8 @@ export interface FileRoutesById {
   '/results': typeof ResultsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/api/chat': typeof ApiChatRoute
-  '/journey/$id': typeof JourneyIdRoute
+  '/journey/$id': typeof JourneyIdRouteWithChildren
+  '/journey/$id/personalise': typeof JourneyIdPersonaliseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/api/chat'
     | '/journey/$id'
+    | '/journey/$id/personalise'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/api/chat'
     | '/journey/$id'
+    | '/journey/$id/personalise'
   id:
     | '__root__'
     | '/'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/api/chat'
     | '/journey/$id'
+    | '/journey/$id/personalise'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -138,7 +150,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   ResultsRoute: typeof ResultsRoute
   ApiChatRoute: typeof ApiChatRoute
-  JourneyIdRoute: typeof JourneyIdRoute
+  JourneyIdRoute: typeof JourneyIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -206,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/journey/$id/personalise': {
+      id: '/journey/$id/personalise'
+      path: '/personalise'
+      fullPath: '/journey/$id/personalise'
+      preLoaderRoute: typeof JourneyIdPersonaliseRouteImport
+      parentRoute: typeof JourneyIdRoute
+    }
   }
 }
 
@@ -221,6 +240,18 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface JourneyIdRouteChildren {
+  JourneyIdPersonaliseRoute: typeof JourneyIdPersonaliseRoute
+}
+
+const JourneyIdRouteChildren: JourneyIdRouteChildren = {
+  JourneyIdPersonaliseRoute: JourneyIdPersonaliseRoute,
+}
+
+const JourneyIdRouteWithChildren = JourneyIdRoute._addFileChildren(
+  JourneyIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
@@ -229,18 +260,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   ResultsRoute: ResultsRoute,
   ApiChatRoute: ApiChatRoute,
-  JourneyIdRoute: JourneyIdRoute,
+  JourneyIdRoute: JourneyIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
