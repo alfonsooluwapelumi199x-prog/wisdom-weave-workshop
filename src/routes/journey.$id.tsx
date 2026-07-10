@@ -185,6 +185,14 @@ function JourneyPage() {
           <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Button
               onClick={() => navigate({ to: "/auth" })}
+              onMouseDown={() => {
+                try {
+                  localStorage.setItem(
+                    "forme.last_journey",
+                    JSON.stringify({ id, kind, country, displayName: blueprint.displayName, flag, currentTitle: active.title }),
+                  );
+                } catch { /* ignore */ }
+              }}
               size="lg"
               className="h-12 rounded-full border-0 px-7 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
               style={{ background: T.primary, boxShadow: `0 12px 30px -12px ${T.primary}` }}
