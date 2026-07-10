@@ -1,8 +1,17 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ArrowRight, Briefcase, GraduationCap, Award, Home, Check, AlertTriangle } from "lucide-react";
+import { ArrowRight, Briefcase, GraduationCap, Award, Home } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  tokens as T,
+  CountryHeader,
+  CompatibilityCard,
+  WhyFitsCard,
+  OpportunityCard,
+  ImproveRecommendationCard,
+  EmptyState,
+} from "@/components/forme";
 
 export const Route = createFileRoute("/results")({
   head: () => ({ meta: [{ title: "Your Opportunities · ForMe" }] }),
@@ -19,16 +28,15 @@ type Pending = {
   countries_of_interest?: string[];
 };
 
-// Palette (light, premium)
+// Palette pulled from the ForMe token module
 const C = {
   bg: "#FFFFFF",
-  bg2: "#F8F5FF",
-  accent: "#C8B6FF",
-  accent2: "#A78BFA",
-  primary: "#8B5CF6",
-  success: "#10B981",
-  text: "#1E1E2E",
-  muted: "#6B7280",
+  bg2: T.surface,
+  accent: T.secondary,
+  primary: T.primary,
+  success: T.success,
+  text: T.text,
+  muted: T.muted,
 };
 
 type Card = {
@@ -38,8 +46,7 @@ type Card = {
   country?: string;
   title: string;
   tagline: string;
-  score: number;
-  reasons: { ok: boolean; text: string }[];
+  reasons: string[];
 };
 
 const COUNTRY_META: Record<string, { flag: string }> = {
@@ -52,10 +59,51 @@ const COUNTRY_META: Record<string, { flag: string }> = {
   "New Zealand": { flag: "🇳🇿" },
 };
 
-const ENGLISH_SPEAKING = new Set([
-  "United Kingdom","United States","Canada","Australia","New Zealand","Ireland",
-  "Nigeria","Ghana","Kenya","South Africa","Jamaica","Uganda","Rwanda","Singapore","India","Pakistan",
-]);
+const GOAL_LABEL: Record<string, string> = {
+  "Permanent Residence": "Permanent Residence Pathways",
+  "Work Abroad": "Work Opportunities",
+  "Study Abroad": "Study Pathways",
+  Scholarships: "Scholarship Opportunities",
+};
+
+const OPPORTUNITY_TITLE: Record<Card["kind"], (country: string) => string> = {
+  pr: (c) => `Permanent Residence in ${c}`,
+  work: (c) => `Work in ${c}`,
+  study: (c) => `Study in ${c}`,
+  scholarship: (c) => `Scholarships in ${c}`,
+};
+
+const KIND_LABEL: Record<Card["kind"], string> = {
+  pr: "Permanent Residence",
+  work: "Work",
+  study: "Study",
+  scholarship: "Scholarship",
+};
+
+function buildReasons(p: Pending, country: string, kindLabel: string): string[] {
+  const reasons: string[] = [];
+  if (p.main_goal) reasons.push(`Your selected goal is ${p.main_goal}.`);
+  if (p.qualification) reasons.push(`Your education (${p.qualification}) aligns with this opportunity.`);
+  if (p.profession ?? p.occupation)
+    reasons.push(`Your profession (${p.profession ?? p.occupation}) may align with this ${kindLabel.toLowerCase()} pathway.`);
+  if ((p.countries_of_interest ?? []).includes(country))
+    reasons.push(`${country} is one of your preferred destinations.`);
+  return reasons;
+}
+
+function buildTagline(p: Pending, country: string, kind: Card["kind"]): string {
+  const bg = p.profession || p.occupation ? `with your background` : "for candidates like you";
+  switch (kind) {
+    case "pr":
+      return `${country} offers permanent residence pathways ${bg}.`;
+    case "work":
+      return `${country} has employer-sponsored routes ${bg}.`;
+    case "study":
+      return `${country} offers study pathways ${bg}, with post-study opportunities to remain.`;
+    case "scholarship":
+      return `Funded study opportunities in ${country} may be available ${bg}.`;
+  }
+}
 
 function buildRecommendations(p: Pending): { work: Card[]; study: Card[]; scholarship: Card[]; pr: Card[] } {
   const goal = p.main_goal ?? "";
@@ -65,130 +113,22 @@ function buildRecommendations(p: Pending): { work: Card[]; study: Card[]; schola
     ? ["Canada", "Australia", "Germany", "United Kingdom", "Ireland", "United States", "New Zealand"]
     : interests.filter((c) => c !== "Other");
 
-  const profession = p.profession ?? p.occupation ?? "";
-  const qualification = p.qualification ?? "";
-  const nationality = p.nationality ?? "";
-  const isEnglishNative = ENGLISH_SPEAKING.has(nationality);
-  const isEnglishCountry = (c: string) => ENGLISH_SPEAKING.has(c);
-  const hasDegree = ["Bachelor's Degree", "Master's Degree", "PhD"].includes(qualification);
-  const isAdvanced = ["Master's Degree", "PhD"].includes(qualification);
+  const makeCard = (kind: Card["kind"]) => (country: string): Card => ({
+    id: `${kind}-${country.toLowerCase().replace(/\s+/g, "-")}`,
+    kind,
+    flag: COUNTRY_META[country]?.flag,
+    country,
+    title: OPPORTUNITY_TITLE[kind](country),
+    tagline: buildTagline(p, country, kind),
+    reasons: buildReasons(p, country, KIND_LABEL[kind]),
+  });
 
-  const score = (base: number, adjustments: number[]) =>
-    Math.max(45, Math.min(97, Math.round(adjustments.reduce((a, b) => a + b, base))));
-
-  const professionFit = (country: string): { pts: number; text: string } => {
-    const p = profession || "your background";
-    return { pts: profession ? 8 : 0, text: `${p} background` };
-  };
-
-  const langCheck = (country: string) => {
-    const ok = isEnglishNative || isEnglishCountry(country) || ["Germany"].includes(country) === false;
-    if (isEnglishCountry(country) && !isEnglishNative) {
-      return { ok: false, text: "English language test required (IELTS / PTE)" };
-    }
-    if (country === "Germany") {
-      return { ok: false, text: "German language proficiency (B1+) recommended" };
-    }
-    return { ok: true, text: "Language requirement met" };
-  };
-
-  const credentialCheck = (country: string) => {
-    if (!hasDegree) return { ok: false, text: "Credential assessment required" };
-    if (["Canada", "Australia", "New Zealand"].includes(country)) {
-      return { ok: false, text: "Credential assessment (ECA / VETASSESS) required" };
-    }
-    if (country === "Germany") return { ok: false, text: "Anabin recognition required" };
-    return { ok: true, text: "Qualification recognised" };
-  };
-
-  const workCard = (country: string): Card => {
-    const fit = professionFit(country);
-    const lang = langCheck(country);
-    const cred = credentialCheck(country);
-    const s = score(70, [hasDegree ? 8 : -5, isAdvanced ? 4 : 0, fit.pts, lang.ok ? 3 : -4, cred.ok ? 4 : -3]);
-    return {
-      id: `work-${country.toLowerCase().replace(/\s+/g, "-")}`,
-      kind: "work",
-      flag: COUNTRY_META[country]?.flag,
-      country,
-      title: `Work in ${country}`,
-      tagline: profession
-        ? `${country} is actively hiring ${profession.toLowerCase()} professionals${p.country_of_residence ? ` from ${p.country_of_residence}` : ""} through employer-sponsored routes.`
-        : `${country} has employer-sponsored routes that may suit your background.`,
-      score: s,
-      reasons: [
-        { ok: !!qualification, text: qualification || "Qualification not provided" },
-        { ok: !!profession, text: fit.text },
-        cred,
-        lang,
-      ],
-    };
-  };
-
-  const studyCard = (country: string): Card => {
-    const lang = langCheck(country);
-    const s = score(72, [hasDegree ? 6 : 3, isAdvanced ? 5 : 0, lang.ok ? 4 : -3]);
-    return {
-      id: `study-${country.toLowerCase().replace(/\s+/g, "-")}`,
-      kind: "study",
-      flag: COUNTRY_META[country]?.flag,
-      country,
-      title: `Study in ${country}`,
-      tagline: `${country} offers ${isAdvanced ? "postgraduate" : "undergraduate and postgraduate"} programmes${profession ? ` in ${profession.toLowerCase()}` : ""} with post-study work rights.`,
-      score: s,
-      reasons: [
-        { ok: !!qualification, text: qualification ? `${qualification} accepted for entry` : "Qualification not provided" },
-        { ok: true, text: "Post-study work visa available" },
-        lang,
-        { ok: false, text: "Proof of funds required" },
-      ],
-    };
-  };
-
-  const prCard = (country: string): Card => {
-    const lang = langCheck(country);
-    const cred = credentialCheck(country);
-    const s = score(68, [hasDegree ? 10 : -6, isAdvanced ? 5 : 0, profession ? 5 : 0, lang.ok ? 3 : -4, cred.ok ? 3 : -3]);
-    return {
-      id: `pr-${country.toLowerCase().replace(/\s+/g, "-")}`,
-      kind: "pr",
-      flag: COUNTRY_META[country]?.flag,
-      country,
-      title: `Permanent Residence in ${country}`,
-      tagline: `${country} offers a points-based pathway to permanent residence${profession ? ` for skilled ${profession.toLowerCase()} professionals` : ""}${qualification ? ` with a ${qualification.toLowerCase()}` : ""}.`,
-      score: s,
-      reasons: [
-        { ok: !!qualification, text: qualification || "Qualification not provided" },
-        { ok: !!profession, text: profession ? `${profession} on skilled occupation lists` : "Profession not provided" },
-        cred,
-        lang,
-      ],
-    };
-  };
-
-  const scholarshipCard = (country: string): Card => {
-    const s = score(74, [isAdvanced ? 8 : hasDegree ? 4 : -2, profession ? 3 : 0]);
-    return {
-      id: `sch-${country.toLowerCase().replace(/\s+/g, "-")}`,
-      kind: "scholarship",
-      flag: COUNTRY_META[country]?.flag,
-      country,
-      title: `Scholarships in ${country}`,
-      tagline: `Government and university-funded scholarships in ${country}${profession ? ` for ${profession.toLowerCase()} candidates` : ""}${isAdvanced ? " at postgraduate level" : ""}.`,
-      score: s,
-      reasons: [
-        { ok: hasDegree, text: hasDegree ? `${qualification} meets typical eligibility` : "Bachelor's minimum usually required" },
-        { ok: true, text: `Open to ${nationality || "your nationality"}` },
-        { ok: false, text: "Competitive — strong academic record needed" },
-        { ok: false, text: "Application deadlines apply" },
-      ],
-    };
-  };
-
-  const work = targetCountries.map(workCard).sort((a, b) => b.score - a.score);
-  const study = targetCountries.map(studyCard).sort((a, b) => b.score - a.score);
-  const pr = targetCountries.map(prCard).sort((a, b) => b.score - a.score);
-  const scholarship = targetCountries.slice(0, 3).map(scholarshipCard).sort((a, b) => b.score - a.score);
+  const work = targetCountries.map(makeCard("work"));
+  const study = targetCountries.map(makeCard("study"));
+  const pr = targetCountries.map(makeCard("pr"));
+  const scholarship = targetCountries.slice(0, 3).map(makeCard("scholarship"));
+  // Suppress unused var warning — `goal` is used by the caller
+  void goal;
 
   return { work, study, scholarship, pr };
 }
@@ -208,16 +148,33 @@ function Results() {
 
   const highlightedCountries = useMemo(() => {
     const set = new Set<string>();
-    const interests = pending?.countries_of_interest ?? [];
-    if (interests.length === 0 || interests.includes("Other")) {
+    const interests = (pending?.countries_of_interest ?? []).filter((c) => c !== "Other");
+    if (interests.length === 0) {
       ["Canada", "Germany", "Australia", "Ireland", "United Kingdom", "United States", "New Zealand"].forEach((c) => set.add(c));
+    } else {
+      interests.forEach((c) => set.add(c));
     }
-    interests.filter((c) => c !== "Other").forEach((c) => set.add(c));
     return set;
   }, [pending]);
 
   const recs = useMemo(() => buildRecommendations(pending ?? {}), [pending]);
   const goal = pending?.main_goal ?? "";
+
+  const selectedInterests = (pending?.countries_of_interest ?? []).filter((c) => c !== "Other");
+  const singleCountry = selectedInterests.length === 1 ? selectedInterests[0] : undefined;
+  const singleGoal = goal || undefined;
+  const showFocusedHeader = !!(singleCountry && singleGoal);
+
+  const topReasons = useMemo(() => {
+    const items: { ok: boolean; text: string }[] = [];
+    if (pending?.main_goal) items.push({ ok: true, text: `Your selected goal is ${pending.main_goal}.` });
+    if (pending?.qualification) items.push({ ok: true, text: `Your education (${pending.qualification}) aligns with this opportunity.` });
+    const prof = pending?.profession ?? pending?.occupation;
+    if (prof) items.push({ ok: true, text: `Your profession (${prof}) may align with this pathway.` });
+    if (singleCountry) items.push({ ok: true, text: `${singleCountry} is one of your preferred destinations.` });
+    if (pending?.nationality) items.push({ ok: true, text: `Open to citizens of ${pending.nationality}.` });
+    return items;
+  }, [pending, singleCountry]);
 
   // Goal-driven ordering
   const sections = useMemo(() => {
@@ -236,6 +193,8 @@ function Results() {
     }
   }, [goal, recs]);
 
+  const hasAny = sections.some((s) => s.cards.length > 0);
+
   return (
     <div className="min-h-screen" style={{ background: C.bg, color: C.text }}>
       {/* Top wordmark */}
@@ -248,24 +207,41 @@ function Results() {
 
       {/* HEADER */}
       <section className="mx-auto max-w-3xl px-6 pt-14 text-center">
-        <motion.h1
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
-          className="text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl"
-          style={{ color: C.text }}
-        >
-          We searched the world for you.
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
-          className="mx-auto mt-5 max-w-xl text-base leading-relaxed sm:text-lg"
-          style={{ color: C.muted }}
-        >
-          Here are the international opportunities that best match your profile today.
-        </motion.p>
+        {showFocusedHeader ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+          >
+            <CountryHeader
+              flag={COUNTRY_META[singleCountry!]?.flag}
+              countryName={singleCountry}
+              opportunityName={GOAL_LABEL[singleGoal!] ?? singleGoal!}
+              eyebrow="We searched the world for you"
+            />
+          </motion.div>
+        ) : (
+          <>
+            <motion.h1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: [0.2, 0.8, 0.2, 1] }}
+              className="text-balance text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl"
+              style={{ color: C.text }}
+            >
+              We searched the world for you.
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.2, 0.8, 0.2, 1] }}
+              className="mx-auto mt-5 max-w-xl text-base leading-relaxed sm:text-lg"
+              style={{ color: C.muted }}
+            >
+              Here are the international opportunities that best match your profile today.
+            </motion.p>
+          </>
+        )}
       </section>
 
       {/* GLOBE */}
@@ -273,9 +249,15 @@ function Results() {
         <LightGlobe highlighted={highlightedCountries} />
       </section>
 
+      {/* TOP SUMMARY: Compatibility + Why */}
+      <section className="mx-auto mt-10 grid max-w-4xl gap-4 px-6 sm:grid-cols-2">
+        <CompatibilityCard mode="preliminary" label="Current Profile Fit" reasons={topReasons} />
+        <WhyFitsCard points={topReasons.map((r) => r.text)} />
+      </section>
+
       {/* SECTIONS */}
       <div className="mx-auto max-w-6xl px-6 pb-24 pt-8">
-        {sections.map((s) => (
+        {hasAny ? sections.map((s) => (
           <Section
             key={s.title}
             icon={s.icon}
@@ -284,7 +266,20 @@ function Results() {
             cards={s.cards}
             onOpen={(id) => navigate({ to: "/journey/$id", params: { id } })}
           />
-        ))}
+        )) : (
+          <div className="mt-10">
+            <EmptyState
+              title="No opportunities found yet."
+              description="Try changing your preferences or exploring more countries."
+              action={{ label: "Edit profile", onClick: () => navigate({ to: "/onboarding" }) }}
+            />
+          </div>
+        )}
+
+        {/* Improve Recommendation */}
+        <div className="mt-14">
+          <ImproveRecommendationCard onImprove={() => navigate({ to: "/onboarding" })} />
+        </div>
 
         {/* BOTTOM CTA */}
         <div
@@ -356,101 +351,21 @@ function Section({
       </p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c, i) => (
-          <OpportunityCard key={c.id} card={c} index={i} onOpen={() => onOpen(c.id)} />
+          <OpportunityCard
+            key={c.id}
+            index={i}
+            flag={c.flag}
+            country={c.country}
+            opportunityType={KIND_LABEL[c.kind]}
+            title={c.title}
+            tagline={c.tagline}
+            fit={{ label: "Current Fit", reasons: c.reasons }}
+            nextAction="View Journey"
+            onView={() => onOpen(c.id)}
+          />
         ))}
       </div>
     </section>
-  );
-}
-
-function OpportunityCard({
-  card,
-  index,
-  onOpen,
-}: {
-  card: Card;
-  index: number;
-  onOpen: () => void;
-}) {
-  const typeLabel =
-    card.kind === "work" ? "Work" :
-    card.kind === "study" ? "Study" :
-    card.kind === "pr" ? "Permanent Residence" : "Scholarship";
-  const scoreColor = card.score >= 80 ? C.success : card.score >= 65 ? C.primary : C.muted;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.05 * index, ease: [0.2, 0.8, 0.2, 1] }}
-      className="group flex h-full flex-col rounded-2xl p-6 transition-all"
-      style={{
-        background: C.bg,
-        border: `1px solid #EEEAF6`,
-        boxShadow: "0 1px 2px rgba(30,30,46,0.04), 0 8px 24px -12px rgba(139,92,246,0.10)",
-      }}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {card.flag ? (
-            <span className="text-2xl leading-none" aria-hidden>{card.flag}</span>
-          ) : (
-            <span
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold"
-              style={{ background: C.bg2, color: C.primary }}
-            >
-              <Award className="h-4 w-4" />
-            </span>
-          )}
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: C.muted }}>
-              {typeLabel}
-            </div>
-            <div className="text-base font-semibold" style={{ color: C.text }}>
-              {card.title}
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-[0.16em]" style={{ color: C.muted }}>Compatibility</div>
-          <div className="text-lg font-semibold leading-tight" style={{ color: scoreColor }}>
-            {card.score}<span className="text-xs font-medium" style={{ color: C.muted }}>/100</span>
-          </div>
-        </div>
-      </div>
-
-      <p className="mt-5 text-sm leading-relaxed" style={{ color: C.muted }}>
-        {card.tagline}
-      </p>
-
-      <ul className="mt-4 space-y-1.5">
-        {card.reasons.map((r, i) => (
-          <li key={i} className="flex items-start gap-2 text-[13px] leading-snug" style={{ color: r.ok ? C.text : C.muted }}>
-            {r.ok ? (
-              <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: C.success }} strokeWidth={3} />
-            ) : (
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#D97706" }} />
-            )}
-            <span>{r.text}</span>
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-6 flex items-center justify-between border-t pt-4" style={{ borderColor: "#F0ECF9" }}>
-        <div>
-          <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: C.muted }}>
-            Next Action
-          </div>
-          <div className="text-sm font-medium" style={{ color: C.text }}>View Journey</div>
-        </div>
-        <button
-          onClick={onOpen}
-          className="inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-medium text-white transition-transform hover:-translate-y-0.5"
-          style={{ background: C.primary, boxShadow: `0 8px 20px -10px ${C.primary}` }}
-        >
-          View <ArrowRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </motion.div>
   );
 }
 
