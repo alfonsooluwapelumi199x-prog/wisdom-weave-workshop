@@ -28,13 +28,19 @@ function Personalise() {
     } catch { /* ignore */ }
   }, [storageKey]);
 
-  // If there are no questions for this opportunity, skip straight to the plan.
+  // If there are no questions for this opportunity, skip straight to account creation.
   useEffect(() => {
     if (blueprint.questions.length === 0) {
       try { localStorage.setItem(storageKey, JSON.stringify({})); } catch { /* ignore */ }
-      navigate({ to: "/journey/$id", params: { id }, replace: true });
+      try {
+        localStorage.setItem(
+          "forme.last_journey",
+          JSON.stringify({ id, kind, country, displayName: blueprint.displayName }),
+        );
+      } catch { /* ignore */ }
+      navigate({ to: "/auth", replace: true });
     }
-  }, [blueprint, id, navigate, storageKey]);
+  }, [blueprint, id, kind, country, navigate, storageKey]);
 
   if (blueprint.questions.length === 0) return null;
 
@@ -51,7 +57,15 @@ function Personalise() {
 
   const onNext = () => {
     if (i < total - 1) setI(i + 1);
-    else navigate({ to: "/journey/$id", params: { id } });
+    else {
+      try {
+        localStorage.setItem(
+          "forme.last_journey",
+          JSON.stringify({ id, kind, country, displayName: blueprint.displayName }),
+        );
+      } catch { /* ignore */ }
+      navigate({ to: "/auth" });
+    }
   };
 
   const onBack = () => {
@@ -176,7 +190,7 @@ function Personalise() {
             className="h-12 rounded-full border-0 px-7 text-base font-medium text-white transition-transform hover:-translate-y-0.5 disabled:opacity-40"
             style={{ background: T.primary, boxShadow: `0 12px 30px -12px ${T.primary}` }}
           >
-            {i < total - 1 ? "Next" : "See My Plan"} <ArrowRight className="ml-1.5 h-4 w-4" />
+            {i < total - 1 ? "Next" : "Create My Account"} <ArrowRight className="ml-1.5 h-4 w-4" />
           </Button>
         </div>
       </div>
