@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -15,11 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Let's save your journey · ForMe" },
+      { title: "Save your journey and create My World · ForMe" },
       {
         name: "description",
         content:
-          "Create your free ForMe account to save your personalised opportunities and continue where you left off.",
+          "ForMe can only continue searching, personalising and tracking opportunities for you when your journey is saved.",
       },
     ],
   }),
@@ -48,6 +48,19 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
+
+  // If already signed in, skip account creation entirely and open My World.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!cancelled && data.session) {
+        await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
+        navigate({ to: "/dashboard", replace: true });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [navigate, save]);
 
   const finish = async () => {
     await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
@@ -119,10 +132,10 @@ function AuthPage() {
           Almost there
         </div>
         <h1 className="text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-          Let's save your journey.
+          Save your journey and create My World
         </h1>
         <p className="mt-3 text-[14px] leading-relaxed text-foreground/65">
-          We already know enough to discover opportunities for you. Create your free account so we can save your journey, track your progress and personalise your next steps.
+          ForMe can only continue searching, personalising and tracking opportunities for you when your journey is saved.
         </p>
 
         <div className="mt-8 space-y-3">
