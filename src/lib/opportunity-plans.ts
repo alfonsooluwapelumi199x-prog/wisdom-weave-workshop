@@ -241,7 +241,8 @@ const CANADA_PR: OpportunityBlueprint = {
 
 function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
   const label = KIND_LABEL[kind];
-  const displayName = country ? `${label} in ${country}` : label;
+  const program = country ? PROGRAMS[`${kind}:${country}`] : undefined;
+  const displayName = program?.name ?? (country ? `${label} in ${country}` : label);
 
   const commonProfileStep: PlanStep = {
     id: "profile",
