@@ -12,7 +12,7 @@ import {
   ImproveRecommendationCard,
   EmptyState,
 } from "@/components/forme";
-import { getProgram } from "@/lib/opportunity-plans";
+import { getProgram, profileSignature } from "@/lib/opportunity-plans";
 
 export const Route = createFileRoute("/results")({
   head: () => ({ meta: [{ title: "Your Opportunities · ForMe" }] }),
