@@ -4,6 +4,7 @@ export type Question = {
   id: string;
   prompt: string;
   helper?: string;
+  why?: string;
   options: { value: string; label: string }[];
 };
 
