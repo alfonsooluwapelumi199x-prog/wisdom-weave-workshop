@@ -145,6 +145,30 @@ function Results() {
   const recs = useMemo(() => buildRecommendations(pending ?? {}), [pending]);
   const goal = pending?.main_goal ?? "";
 
+  // Persist the full recommendation set + a signature of the profile inputs
+  // as soon as Results has data — not only when the user opens a card. This
+  // lets /loading skip its animation on subsequent visits, and lets My World
+  // show every recommended opportunity.
+  useEffect(() => {
+    if (!pending) return;
+    try {
+      const all = [...recs.pr, ...recs.work, ...recs.study, ...recs.scholarship];
+      localStorage.setItem(
+        "forme.recommendations",
+        JSON.stringify(
+          all.map((c) => ({
+            id: c.id,
+            kind: c.kind,
+            country: c.country,
+            displayName: c.programName,
+            flag: c.flag,
+          })),
+        ),
+      );
+      localStorage.setItem("forme.recs_signature", profileSignature(pending));
+    } catch { /* ignore */ }
+  }, [pending, recs]);
+
   const selectedInterests = (pending?.countries_of_interest ?? []).filter((c) => c !== "Other");
   const singleCountry = selectedInterests.length === 1 ? selectedInterests[0] : undefined;
   const singleGoal = goal || undefined;
