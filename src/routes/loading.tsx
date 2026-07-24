@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Globe } from "@/components/marketing/globe";
+import { profileSignature } from "@/lib/opportunity-plans";
 
 export const Route = createFileRoute("/loading")({
   head: () => ({ meta: [{ title: "Searching · ForMe" }] }),
@@ -18,22 +19,22 @@ type Step = {
 const STEPS: Step[] = [
   {
     message: "Searching opportunities across the world…",
-    duration: 3000,
+    duration: 700,
     dots: 1,
   },
   {
     message: "Comparing thousands of international pathways…",
-    duration: 3000,
+    duration: 700,
     dots: 2,
   },
   {
     message: "Finding opportunities that match your profile…",
-    duration: 3200,
+    duration: 700,
     dots: 3,
   },
   {
     message: "Building your personalised recommendations…",
-    duration: 3000,
+    duration: 700,
     dots: 4,
     focusPins: [
       "Toronto",
@@ -48,7 +49,7 @@ const STEPS: Step[] = [
   },
   {
     message: "Almost there…",
-    duration: 2200,
+    duration: 500,
     dots: 4,
     focusPins: [
       "Toronto",
@@ -68,12 +69,28 @@ function DiscoveryExperience() {
   const [stepIndex, setStepIndex] = useState(0);
   const [exiting, setExiting] = useState(false);
 
+  // If we already have a cached recommendation set for this exact profile,
+  // skip the animation entirely and open Results immediately.
+  useEffect(() => {
+    try {
+      const rawP = localStorage.getItem("forme.pending_profile");
+      const rawR = localStorage.getItem("forme.recommendations");
+      const sig = localStorage.getItem("forme.recs_signature");
+      if (rawP && rawR && sig) {
+        const p = JSON.parse(rawP);
+        if (profileSignature(p) === sig) {
+          navigate({ to: "/results", replace: true });
+        }
+      }
+    } catch { /* ignore */ }
+  }, [navigate]);
+
   useEffect(() => {
     if (stepIndex >= STEPS.length) return;
     const t = setTimeout(() => {
       if (stepIndex === STEPS.length - 1) {
         setExiting(true);
-        setTimeout(() => navigate({ to: "/results" }), 900);
+        setTimeout(() => navigate({ to: "/results" }), 250);
       } else {
         setStepIndex((i) => i + 1);
       }
@@ -87,7 +104,7 @@ function DiscoveryExperience() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: exiting ? 0 : 1 }}
-      transition={{ duration: 0.9, ease: "easeInOut" }}
+      transition={{ duration: 0.25, ease: "easeInOut" }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-background px-6"
     >
       {/* Ambient background */}

@@ -135,6 +135,53 @@ function baseReasons(ctx: PlanContext): string[] {
   return out;
 }
 
+/**
+ * Deterministic signature of the profile inputs that drive the recommendation
+ * set. Used by /loading and /results to decide whether the cached
+ * recommendations still match the current profile.
+ */
+export function profileSignature(p: Pending): string {
+  const parts = [
+    p.main_goal ?? "",
+    p.qualification ?? "",
+    p.profession ?? p.occupation ?? "",
+    [...(p.countries_of_interest ?? [])].sort().join("|"),
+  ];
+  return parts.join("::");
+}
+
+/**
+ * Minimum answers required to pick a personalised next step for a given
+ * opportunity kind. Keys align with the existing questions in each blueprint.
+ */
+export function hasCoreEligibility(ctx: PlanContext): boolean {
+  const a = ctx.answers ?? {};
+  switch (ctx.kind) {
+    case "pr":
+      // Canada PR uses `english_test`; generic PR uses `language_test`.
+      return Boolean((a.english_test || a.language_test) && a.experience);
+    case "work":
+      return Boolean(a.language_test && a.experience);
+    case "study":
+      return Boolean(a.level && a.language_test);
+    case "scholarship":
+      return Boolean(a.level && a.language_test);
+  }
+}
+
+/**
+ * Synthetic "collect eligibility first" step. Returned by `currentStep` when
+ * `hasCoreEligibility` is false, so the Opportunity Plan sends the user
+ * through the existing eligibility-question flow before recommending a
+ * concrete provider or task.
+ */
+export const ELIGIBILITY_STEP: PlanStep = {
+  id: "eligibility",
+  title: "Complete your eligibility details",
+  description:
+    "Complete your eligibility details so ForMe can assess your position and personalise your next step.",
+};
+
 function fillStatuses(steps: PlanStep[], currentId: string, completedIds: string[] = []): Record<string, StepStatus> {
   const out: Record<string, StepStatus> = {};
   let seenCurrent = false;
@@ -210,8 +257,9 @@ const CANADA_PR: OpportunityBlueprint = {
     },
     {
       id: "english_test",
-      title: "English language test",
-      description: "Book and complete an approved English test (IELTS General, CELPIP or PTE Core).",
+      title: "Choose an Approved Language Test",
+      description:
+        "Compare the approved language tests, choose the option that suits you best, and prepare before booking.",
       estimatedTime: "2–6 weeks",
       estimatedCost: "£180–£250",
       resources: [
@@ -264,10 +312,18 @@ const CANADA_PR: OpportunityBlueprint = {
     },
   ]),
   deriveStatuses: (ctx) => {
-    const completed: string[] = ["profile"];
+    // Gate: without minimum eligibility answers we don't pick a concrete step.
+    if (!hasCoreEligibility(ctx)) {
+      const statuses: Record<string, StepStatus> = {};
+      for (const s of CANADA_PR.steps) statuses[s.id] = "not_started";
+      statuses["eligibility"] = "in_progress";
+      return statuses;
+    }
+    const p = ctx.profile;
+    const completed: string[] = [];
+    if (p.qualification && (p.profession ?? p.occupation)) completed.push("profile");
     if (ctx.answers.english_test === "yes") completed.push("english_test");
     if (ctx.answers.eca === "yes") completed.push("eca");
-    // Current is first non-completed step
     const order = ["profile", "english_test", "eca", "ee_profile", "ita", "pr_application"];
     const current = order.find((id) => !completed.includes(id)) ?? "pr_application";
     return fillStatuses(CANADA_PR.steps, current, completed);
@@ -791,7 +847,49 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
     displayName,
     questions: questionsByKind[kind],
     steps,
-    deriveStatuses: () => fillStatuses(steps, steps[0].id, []),
+    deriveStatuses: (ctx) => {
+      if (!hasCoreEligibility(ctx)) {
+        const statuses: Record<string, StepStatus> = {};
+        for (const s of steps) statuses[s.id] = "not_started";
+        statuses["eligibility"] = "in_progress";
+        return statuses;
+      }
+      const a = ctx.answers ?? {};
+      // For each step, determine whether the corresponding eligibility answer
+      // marks it satisfied. Steps without a matching answer key are treated as
+      // not-yet-satisfied so we don't skip past them.
+      const isSatisfied = (id: string): boolean => {
+        switch (id) {
+          case "profile":
+            return Boolean(ctx.profile.qualification && (ctx.profile.profession ?? ctx.profile.occupation));
+          case "language":
+          case "language_test":
+            return a.language_test === "yes" || a.language_test === "not_required";
+          case "credentials":
+            return a.credentials === "yes";
+          case "cv":
+            return false;
+          case "search":
+          case "offer":
+            return false;
+          case "shortlist":
+          case "materials":
+          case "apply":
+          case "eligibility":
+            return false;
+          default:
+            return false;
+        }
+      };
+      const completed: string[] = [];
+      let current: string | undefined;
+      for (const s of steps) {
+        if (isSatisfied(s.id)) completed.push(s.id);
+        else { current = s.id; break; }
+      }
+      if (!current) current = steps[steps.length - 1].id;
+      return fillStatuses(steps, current, completed);
+    },
     deriveConfidence: (ctx) => {
       const p = ctx.profile;
       let score = 0;
@@ -825,6 +923,7 @@ export function parseJourneyId(id: string): { kind: Kind; country?: string } {
 }
 
 export function currentStep(blueprint: OpportunityBlueprint, statuses: Record<string, StepStatus>): PlanStep {
+  if (statuses["eligibility"] === "in_progress") return ELIGIBILITY_STEP;
   const inProgress = blueprint.steps.find((s) => statuses[s.id] === "in_progress");
   return inProgress ?? blueprint.steps[0];
 }
