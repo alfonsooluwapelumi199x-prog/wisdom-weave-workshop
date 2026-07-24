@@ -85,6 +85,32 @@ function buildOpportunitiesFromProfile(p: Pending): Opportunity[] {
   return list;
 }
 
+type StoredRec = {
+  id: string;
+  kind: Kind;
+  country?: string;
+  flag?: string;
+  displayName: string;
+};
+
+function mergeRecommendations(profileList: Opportunity[], stored: StoredRec[]): Opportunity[] {
+  const map = new Map<string, Opportunity>();
+  for (const o of profileList) map.set(o.id, o);
+  for (const r of stored) {
+    if (!map.has(r.id)) {
+      map.set(r.id, {
+        id: r.id,
+        kind: r.kind,
+        country: r.country,
+        flag: r.flag,
+        displayName: r.displayName,
+        status: "recommended",
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 function shortDescription(kind: Kind, country?: string): string {
   const c = country ?? "your target country";
   switch (kind) {
@@ -102,6 +128,7 @@ function MyWorld() {
   const [statusMap, setStatusMap] = useState<Record<string, OppStatus>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const [lastJourney, setLastJourney] = useState<LastJourney | null>(null);
+  const [storedRecs, setStoredRecs] = useState<StoredRec[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -117,11 +144,14 @@ function MyWorld() {
       if (a) setActiveId(a);
       const lj = localStorage.getItem("forme.last_journey");
       if (lj) setLastJourney(JSON.parse(lj));
+      const rec = localStorage.getItem("forme.recommendations");
+      if (rec) setStoredRecs(JSON.parse(rec));
     } catch { /* ignore */ }
   }, []);
 
   const opportunities = useMemo<Opportunity[]>(() => {
-    const base = buildOpportunitiesFromProfile(pending);
+    const profileList = buildOpportunitiesFromProfile(pending);
+    const base = mergeRecommendations(profileList, storedRecs);
     // Ensure last journey is included even if outside profile targets
     if (lastJourney && !base.find((o) => o.id === lastJourney.id)) {
       base.unshift({
@@ -134,9 +164,8 @@ function MyWorld() {
       });
     }
     return base
-      .map((o) => ({ ...o, status: (o.id === activeId ? "active" : statusMap[o.id]) ?? o.status }))
-      .filter((o) => o.status !== "archived" ? true : true);
-  }, [pending, statusMap, activeId, lastJourney]);
+      .map((o) => ({ ...o, status: (o.id === activeId ? "active" : statusMap[o.id]) ?? o.status }));
+  }, [pending, storedRecs, statusMap, activeId, lastJourney]);
 
   const active = opportunities.find((o) => o.status === "active") ?? null;
   const activeBlueprint = active ? resolveBlueprint(active.kind, active.country) : null;
@@ -150,6 +179,7 @@ function MyWorld() {
   }, [opportunities, active]);
 
   const nonArchived = opportunities.filter((o) => o.status !== "archived");
+  const archived = opportunities.filter((o) => o.status === "archived");
 
   const persistStatus = (next: Record<string, OppStatus>) => {
     setStatusMap(next);
@@ -169,6 +199,9 @@ function MyWorld() {
   const handleArchive = (o: Opportunity) => {
     if (activeId === o.id) persistActive(null);
     persistStatus({ ...statusMap, [o.id]: "archived" });
+  };
+  const handleUnarchive = (o: Opportunity) => {
+    persistStatus({ ...statusMap, [o.id]: "recommended" });
   };
   const handleMakeActive = (o: Opportunity) => {
     persistActive(o.id);
