@@ -341,8 +341,16 @@ function MyWorld() {
                     <p className="mt-4 text-[13.5px] leading-relaxed" style={{ color: T.muted }}>
                       {shortDescription(o.kind, o.country)}
                     </p>
+                    <div className="mt-3">
+                      <div className="text-[10px] uppercase tracking-[0.2em]" style={{ color: T.primary }}>
+                        Why it matches
+                      </div>
+                      <p className="mt-1 text-[13px] leading-relaxed" style={{ color: T.text }}>
+                        {buildWhy(pending, o)}
+                      </p>
+                    </div>
                     <div className="mt-4 flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
-                      <span className="text-[10px] uppercase tracking-[0.18em]">Confidence</span>
+                      <span className="text-[10px] uppercase tracking-[0.2em]">Current Match</span>
                       <ConfidencePill level={confidence.level} />
                     </div>
                     <div className="mt-5 flex items-center justify-between border-t pt-4" style={{ borderColor: T.border }}>
@@ -354,7 +362,7 @@ function MyWorld() {
                           <Archive className="h-3.5 w-3.5" />
                         </IconAction>
                         {o.status !== "active" && (
-                          <IconAction label="Set active" onClick={() => handleMakeActive(o)}>
+                          <IconAction label="Make Active" onClick={() => handleMakeActive(o)}>
                             <Star className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
