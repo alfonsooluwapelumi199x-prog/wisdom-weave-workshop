@@ -364,7 +364,7 @@ function Section({
             index={i}
             flag={c.flag}
             country={c.country}
-            opportunityType={KIND_LABEL[c.kind]}
+            opportunityType={c.country ? `${c.country} · ${KIND_LABEL[c.kind]}` : KIND_LABEL[c.kind]}
             title={c.title}
             tagline={c.tagline}
             fit={{ label: "Current Fit", reasons: c.reasons }}
