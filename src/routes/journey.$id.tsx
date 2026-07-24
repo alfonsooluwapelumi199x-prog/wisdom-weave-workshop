@@ -77,13 +77,8 @@ function JourneyPage() {
     status: statuses[s.id] ?? "not_started",
   }));
 
-  const scrollToResources = () => {
-    const el = document.querySelector<HTMLElement>("[data-resources-section]");
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    else {
-      const first = active.resources?.[0];
-      if (first) window.open(first.url, "_blank", "noopener,noreferrer");
-    }
+  const openJourneyProfile = () => {
+    navigate({ to: "/journey/$id/personalise", params: { id } });
   };
 
   return (
@@ -127,8 +122,8 @@ function JourneyPage() {
           eyebrow="Your Next Action"
           title={active.title}
           description={active.description}
-          ctaLabel="Start This Step"
-          onCta={scrollToResources}
+          ctaLabel="Complete My Journey Profile"
+          onCta={openJourneyProfile}
         />
 
         {(active.estimatedTime || active.estimatedCost) && (
@@ -173,7 +168,10 @@ function JourneyPage() {
           </div>
         )}
 
-        <ImproveRecommendationCard onImprove={() => navigate({ to: "/onboarding" })} />
+        <ImproveRecommendationCard
+          ctaLabel="Complete My Journey Profile"
+          onImprove={openJourneyProfile}
+        />
 
         <div
           className="rounded-3xl px-7 py-8 text-center"

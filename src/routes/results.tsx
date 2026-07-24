@@ -264,7 +264,30 @@ function Results() {
             title={s.title}
             subtitle={s.subtitle}
             cards={s.cards}
-            onOpen={(id) => navigate({ to: "/journey/$id", params: { id } })}
+            onOpen={(id) => {
+              // Preserve the selected opportunity and the full recommendation set.
+              try {
+                const all = [...recs.pr, ...recs.work, ...recs.study, ...recs.scholarship];
+                const chosen = all.find((c) => c.id === id);
+                if (chosen) {
+                  localStorage.setItem(
+                    "forme.last_journey",
+                    JSON.stringify({
+                      id: chosen.id,
+                      kind: chosen.kind,
+                      country: chosen.country,
+                      displayName: chosen.title,
+                      flag: chosen.flag,
+                    }),
+                  );
+                }
+                localStorage.setItem(
+                  "forme.recommendations",
+                  JSON.stringify(all.map((c) => ({ id: c.id, kind: c.kind, country: c.country, displayName: c.title, flag: c.flag }))),
+                );
+              } catch { /* ignore */ }
+              navigate({ to: "/journey/$id/details", params: { id } });
+            }}
           />
         )) : (
           <div className="mt-10">
@@ -276,9 +299,9 @@ function Results() {
           </div>
         )}
 
-        {/* Improve Recommendation */}
+        {/* Improve Recommendation → account + journey profile, never restart onboarding */}
         <div className="mt-14">
-          <ImproveRecommendationCard onImprove={() => navigate({ to: "/onboarding" })} />
+          <ImproveRecommendationCard onImprove={() => navigate({ to: "/auth" })} />
         </div>
 
         {/* BOTTOM CTA */}
