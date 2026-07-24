@@ -72,41 +72,41 @@ const KIND_LABEL: Record<Kind, string> = {
 export type ProgramMeta = { name: string; description: string };
 
 export const PROGRAMS: Record<string, ProgramMeta> = {
-  // Permanent Residence
-  "pr:Canada": { name: "Express Entry", description: "Canada's flagship application-management system for skilled workers seeking permanent residence." },
-  "pr:Australia": { name: "Skilled Independent Visa — Subclass 189", description: "A points-tested permanent skilled migration pathway for eligible workers." },
-  "pr:United Kingdom": { name: "Indefinite Leave to Remain (Skilled Worker route)", description: "Long-term settlement in the UK after qualifying years on the Skilled Worker Visa." },
-  "pr:Germany": { name: "Settlement Permit (Niederlassungserlaubnis)", description: "Permanent residence in Germany after qualifying employment or study." },
-  "pr:Ireland": { name: "Stamp 4 — Long-term Residence", description: "Long-term residence in Ireland after qualifying employment." },
-  "pr:United States": { name: "EB-2 / EB-3 Employment-Based Green Card", description: "Employment-based permanent residence in the United States." },
-  "pr:New Zealand": { name: "Skilled Migrant Category Resident Visa", description: "Points-tested permanent residence for skilled workers." },
+  // Permanent Residence — "Specific Program or Stream — Wider System"
+  "pr:Canada": { name: "Federal Skilled Worker Program — Express Entry", description: "A skilled immigration program managed through Canada's Express Entry system." },
+  "pr:Australia": { name: "Skilled Independent Visa — Subclass 189", description: "A points-tested permanent skilled migration visa under Australia's General Skilled Migration program." },
+  "pr:United Kingdom": { name: "Indefinite Leave to Remain — Skilled Worker route", description: "Long-term UK settlement after qualifying years on the Skilled Worker Visa." },
+  "pr:Germany": { name: "Settlement Permit (Niederlassungserlaubnis) — German Residence Act", description: "Permanent residence in Germany granted under the Residence Act after qualifying employment or study." },
+  "pr:Ireland": { name: "Stamp 4 — Long-Term Residence", description: "Long-term residence in Ireland after qualifying employment on an eligible permit." },
+  "pr:United States": { name: "EB-2 / EB-3 Employment-Based Green Card — US Permanent Residence", description: "Employment-based permanent residence in the United States." },
+  "pr:New Zealand": { name: "Skilled Migrant Category Resident Visa — New Zealand Residence Programme", description: "Points-tested permanent residence for skilled workers under New Zealand's Residence Programme." },
 
   // Work
-  "work:Canada": { name: "Global Talent Stream", description: "Fast-tracked work permit for in-demand talent hired by eligible Canadian employers." },
+  "work:Canada": { name: "Global Talent Stream — Temporary Foreign Worker Program", description: "Fast-tracked work permit for in-demand talent hired by eligible Canadian employers." },
   "work:Australia": { name: "Skills in Demand Visa — Subclass 482", description: "Employer-sponsored temporary skilled work visa for eligible occupations." },
-  "work:United Kingdom": { name: "Skilled Worker Visa", description: "Employer-sponsored work visa for eligible skilled roles in the UK." },
-  "work:Germany": { name: "EU Blue Card", description: "Work and residence permit for highly qualified professionals in Germany." },
-  "work:Ireland": { name: "Critical Skills Employment Permit", description: "Employment permit for eligible in-demand occupations in Ireland." },
-  "work:United States": { name: "H-1B Specialty Occupation Visa", description: "Employer-sponsored temporary work visa for specialty occupations." },
-  "work:New Zealand": { name: "Accredited Employer Work Visa", description: "Employer-sponsored temporary work visa in New Zealand." },
+  "work:United Kingdom": { name: "Skilled Worker Visa — UK Points-Based Immigration System", description: "Employer-sponsored work visa for eligible skilled roles in the UK." },
+  "work:Germany": { name: "EU Blue Card — German Skilled Immigration Act", description: "Work and residence permit for highly qualified professionals in Germany." },
+  "work:Ireland": { name: "Critical Skills Employment Permit — Irish Employment Permits System", description: "Employment permit for eligible in-demand occupations in Ireland." },
+  "work:United States": { name: "H-1B Specialty Occupation Visa — US Nonimmigrant Worker Program", description: "Employer-sponsored temporary work visa for specialty occupations." },
+  "work:New Zealand": { name: "Accredited Employer Work Visa — New Zealand Work Visa Programme", description: "Employer-sponsored temporary work visa in New Zealand." },
 
   // Study
-  "study:Canada": { name: "Canada Study Permit", description: "Student permit to study at a Designated Learning Institution." },
+  "study:Canada": { name: "Study Permit — International Student Program", description: "Student permit to study at a Designated Learning Institution in Canada." },
   "study:Australia": { name: "Student Visa — Subclass 500", description: "Australian student visa for eligible full-time programmes." },
-  "study:United Kingdom": { name: "UK Student Visa", description: "UK student visa to study at a licensed sponsor institution." },
-  "study:Germany": { name: "Germany Student Visa", description: "National visa to study at a recognised German higher-education institution." },
-  "study:Ireland": { name: "Stamp 2 Student Permission", description: "Permission to study a recognised full-time course in Ireland." },
-  "study:United States": { name: "F-1 Student Visa", description: "US student visa for academic studies at SEVP-approved institutions." },
-  "study:New Zealand": { name: "New Zealand Student Visa", description: "Student visa to study a full-time programme in New Zealand." },
+  "study:United Kingdom": { name: "Student Visa — UK Points-Based Immigration System", description: "UK student visa to study at a licensed sponsor institution." },
+  "study:Germany": { name: "National Student Visa — German Residence Act", description: "National visa to study at a recognised German higher-education institution." },
+  "study:Ireland": { name: "Stamp 2 Student Permission — Irish Immigration Service", description: "Permission to study a recognised full-time course in Ireland." },
+  "study:United States": { name: "F-1 Student Visa — US Student and Exchange Visitor Program", description: "US student visa for academic studies at SEVP-approved institutions." },
+  "study:New Zealand": { name: "Student Visa — Immigration New Zealand", description: "Student visa to study a full-time programme in New Zealand." },
 
   // Scholarships
-  "scholarship:Canada": { name: "Vanier Canada Graduate Scholarships", description: "Prestigious scholarship for doctoral study in Canada." },
-  "scholarship:Australia": { name: "Australia Awards Scholarships", description: "Fully funded scholarships to study at Australian institutions." },
-  "scholarship:United Kingdom": { name: "Chevening Scholarships", description: "UK government's global scholarship for master's study." },
-  "scholarship:Germany": { name: "DAAD Scholarships", description: "German Academic Exchange Service scholarships for international students." },
-  "scholarship:Ireland": { name: "Government of Ireland International Education Scholarships", description: "Scholarship for study at Irish higher-education institutions." },
-  "scholarship:United States": { name: "Fulbright Foreign Student Program", description: "Fulbright scholarships for graduate study in the United States." },
-  "scholarship:New Zealand": { name: "Manaaki New Zealand Scholarships", description: "Government-funded scholarships to study in New Zealand." },
+  "scholarship:Canada": { name: "Vanier Canada Graduate Scholarships — Government of Canada Awards", description: "Prestigious scholarship for doctoral study in Canada." },
+  "scholarship:Australia": { name: "Australia Awards Scholarships — Australian Government Scholarships", description: "Fully funded scholarships to study at Australian institutions." },
+  "scholarship:United Kingdom": { name: "Chevening Scholarships — UK Government Global Scholarships", description: "UK government's global scholarship for master's study." },
+  "scholarship:Germany": { name: "DAAD Scholarships — German Academic Exchange Service", description: "German Academic Exchange Service scholarships for international students." },
+  "scholarship:Ireland": { name: "Government of Ireland International Education Scholarships — Higher Education Authority", description: "Scholarship for study at Irish higher-education institutions." },
+  "scholarship:United States": { name: "Fulbright Foreign Student Program — US Department of State", description: "Fulbright scholarships for graduate study in the United States." },
+  "scholarship:New Zealand": { name: "Manaaki New Zealand Scholarships — New Zealand Government Aid Programme", description: "Government-funded scholarships to study in New Zealand." },
 };
 
 export function getProgram(kind: Kind, country?: string): ProgramMeta {
@@ -168,7 +168,7 @@ const CANADA_PR: OpportunityBlueprint = {
   key: "pr:Canada",
   kind: "pr",
   country: "Canada",
-  displayName: "Express Entry",
+  displayName: "Federal Skilled Worker Program — Express Entry",
   questions: [
     {
       id: "english_test",
