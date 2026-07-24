@@ -85,6 +85,32 @@ function buildOpportunitiesFromProfile(p: Pending): Opportunity[] {
   return list;
 }
 
+type StoredRec = {
+  id: string;
+  kind: Kind;
+  country?: string;
+  flag?: string;
+  displayName: string;
+};
+
+function mergeRecommendations(profileList: Opportunity[], stored: StoredRec[]): Opportunity[] {
+  const map = new Map<string, Opportunity>();
+  for (const o of profileList) map.set(o.id, o);
+  for (const r of stored) {
+    if (!map.has(r.id)) {
+      map.set(r.id, {
+        id: r.id,
+        kind: r.kind,
+        country: r.country,
+        flag: r.flag,
+        displayName: r.displayName,
+        status: "recommended",
+      });
+    }
+  }
+  return Array.from(map.values());
+}
+
 function shortDescription(kind: Kind, country?: string): string {
   const c = country ?? "your target country";
   switch (kind) {
@@ -102,6 +128,7 @@ function MyWorld() {
   const [statusMap, setStatusMap] = useState<Record<string, OppStatus>>({});
   const [activeId, setActiveId] = useState<string | null>(null);
   const [lastJourney, setLastJourney] = useState<LastJourney | null>(null);
+  const [storedRecs, setStoredRecs] = useState<StoredRec[]>([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -117,11 +144,14 @@ function MyWorld() {
       if (a) setActiveId(a);
       const lj = localStorage.getItem("forme.last_journey");
       if (lj) setLastJourney(JSON.parse(lj));
+      const rec = localStorage.getItem("forme.recommendations");
+      if (rec) setStoredRecs(JSON.parse(rec));
     } catch { /* ignore */ }
   }, []);
 
   const opportunities = useMemo<Opportunity[]>(() => {
-    const base = buildOpportunitiesFromProfile(pending);
+    const profileList = buildOpportunitiesFromProfile(pending);
+    const base = mergeRecommendations(profileList, storedRecs);
     // Ensure last journey is included even if outside profile targets
     if (lastJourney && !base.find((o) => o.id === lastJourney.id)) {
       base.unshift({
@@ -134,9 +164,8 @@ function MyWorld() {
       });
     }
     return base
-      .map((o) => ({ ...o, status: (o.id === activeId ? "active" : statusMap[o.id]) ?? o.status }))
-      .filter((o) => o.status !== "archived" ? true : true);
-  }, [pending, statusMap, activeId, lastJourney]);
+      .map((o) => ({ ...o, status: (o.id === activeId ? "active" : statusMap[o.id]) ?? o.status }));
+  }, [pending, storedRecs, statusMap, activeId, lastJourney]);
 
   const active = opportunities.find((o) => o.status === "active") ?? null;
   const activeBlueprint = active ? resolveBlueprint(active.kind, active.country) : null;
@@ -150,6 +179,7 @@ function MyWorld() {
   }, [opportunities, active]);
 
   const nonArchived = opportunities.filter((o) => o.status !== "archived");
+  const archived = opportunities.filter((o) => o.status === "archived");
 
   const persistStatus = (next: Record<string, OppStatus>) => {
     setStatusMap(next);
@@ -169,6 +199,9 @@ function MyWorld() {
   const handleArchive = (o: Opportunity) => {
     if (activeId === o.id) persistActive(null);
     persistStatus({ ...statusMap, [o.id]: "archived" });
+  };
+  const handleUnarchive = (o: Opportunity) => {
+    persistStatus({ ...statusMap, [o.id]: "recommended" });
   };
   const handleMakeActive = (o: Opportunity) => {
     persistActive(o.id);
@@ -308,8 +341,16 @@ function MyWorld() {
                     <p className="mt-4 text-[13.5px] leading-relaxed" style={{ color: T.muted }}>
                       {shortDescription(o.kind, o.country)}
                     </p>
+                    <div className="mt-3">
+                      <div className="text-[10px] uppercase tracking-[0.2em]" style={{ color: T.primary }}>
+                        Why it matches
+                      </div>
+                      <p className="mt-1 text-[13px] leading-relaxed" style={{ color: T.text }}>
+                        {buildWhy(pending, o)}
+                      </p>
+                    </div>
                     <div className="mt-4 flex items-center gap-2 text-[12px]" style={{ color: T.muted }}>
-                      <span className="text-[10px] uppercase tracking-[0.18em]">Confidence</span>
+                      <span className="text-[10px] uppercase tracking-[0.2em]">Current Match</span>
                       <ConfidencePill level={confidence.level} />
                     </div>
                     <div className="mt-5 flex items-center justify-between border-t pt-4" style={{ borderColor: T.border }}>
@@ -321,7 +362,7 @@ function MyWorld() {
                           <Archive className="h-3.5 w-3.5" />
                         </IconAction>
                         {o.status !== "active" && (
-                          <IconAction label="Set active" onClick={() => handleMakeActive(o)}>
+                          <IconAction label="Make Active" onClick={() => handleMakeActive(o)}>
                             <Star className="h-3.5 w-3.5" />
                           </IconAction>
                         )}
@@ -345,6 +386,38 @@ function MyWorld() {
         </Section>
 
         {/* Recommended This Week */}
+        {archived.length > 0 && (
+          <Section title="Archived">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {archived.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex items-center justify-between rounded-2xl p-4"
+                  style={{ background: T.surface, border: `1px solid ${T.border}` }}
+                >
+                  <div className="flex items-center gap-3">
+                    {o.flag && <span className="text-xl" aria-hidden>{o.flag}</span>}
+                    <div>
+                      <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: T.muted }}>
+                        {o.country ?? KIND_LABEL[o.kind]}
+                      </div>
+                      <div className="text-[14px] font-medium" style={{ color: T.text }}>
+                        {o.displayName}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUnarchive(o)}
+                    className="text-[12px] font-medium uppercase tracking-[0.18em]"
+                    style={{ color: T.primary }}
+                  >
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
         {weekly && (
           <Section title="Recommended This Week">
             <div
