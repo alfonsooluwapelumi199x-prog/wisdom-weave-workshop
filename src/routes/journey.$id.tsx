@@ -50,13 +50,8 @@ function JourneyPage() {
     } catch { /* ignore */ }
   }, [id]);
 
-  // If personalisation hasn't been done yet AND this blueprint has questions,
-  // send the user through the personalisation flow first.
-  useEffect(() => {
-    if (blueprint.questions.length > 0 && answers === null) {
-      navigate({ to: "/journey/$id/personalise", params: { id }, replace: true });
-    }
-  }, [blueprint, answers, id, navigate]);
+  // Note: do NOT auto-redirect to personalise. The correct flow is
+  // Details → Opportunity Plan → (user taps CTA) → Complete Journey Profile.
 
   const ctx = {
     profile: pending ?? {},
