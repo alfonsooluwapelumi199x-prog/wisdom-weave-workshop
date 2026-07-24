@@ -64,6 +64,65 @@ const KIND_LABEL: Record<Kind, string> = {
   scholarship: "Scholarship",
 };
 
+/**
+ * Official / commonly-recognised program names for each (kind, country).
+ * Used as the primary title on recommendation cards, opportunity details,
+ * the opportunity plan, eligibility flow and My World.
+ */
+export type ProgramMeta = { name: string; description: string };
+
+export const PROGRAMS: Record<string, ProgramMeta> = {
+  // Permanent Residence
+  "pr:Canada": { name: "Express Entry", description: "Canada's flagship application-management system for skilled workers seeking permanent residence." },
+  "pr:Australia": { name: "Skilled Independent Visa — Subclass 189", description: "A points-tested permanent skilled migration pathway for eligible workers." },
+  "pr:United Kingdom": { name: "Indefinite Leave to Remain (Skilled Worker route)", description: "Long-term settlement in the UK after qualifying years on the Skilled Worker Visa." },
+  "pr:Germany": { name: "Settlement Permit (Niederlassungserlaubnis)", description: "Permanent residence in Germany after qualifying employment or study." },
+  "pr:Ireland": { name: "Stamp 4 — Long-term Residence", description: "Long-term residence in Ireland after qualifying employment." },
+  "pr:United States": { name: "EB-2 / EB-3 Employment-Based Green Card", description: "Employment-based permanent residence in the United States." },
+  "pr:New Zealand": { name: "Skilled Migrant Category Resident Visa", description: "Points-tested permanent residence for skilled workers." },
+
+  // Work
+  "work:Canada": { name: "Global Talent Stream", description: "Fast-tracked work permit for in-demand talent hired by eligible Canadian employers." },
+  "work:Australia": { name: "Skills in Demand Visa — Subclass 482", description: "Employer-sponsored temporary skilled work visa for eligible occupations." },
+  "work:United Kingdom": { name: "Skilled Worker Visa", description: "Employer-sponsored work visa for eligible skilled roles in the UK." },
+  "work:Germany": { name: "EU Blue Card", description: "Work and residence permit for highly qualified professionals in Germany." },
+  "work:Ireland": { name: "Critical Skills Employment Permit", description: "Employment permit for eligible in-demand occupations in Ireland." },
+  "work:United States": { name: "H-1B Specialty Occupation Visa", description: "Employer-sponsored temporary work visa for specialty occupations." },
+  "work:New Zealand": { name: "Accredited Employer Work Visa", description: "Employer-sponsored temporary work visa in New Zealand." },
+
+  // Study
+  "study:Canada": { name: "Canada Study Permit", description: "Student permit to study at a Designated Learning Institution." },
+  "study:Australia": { name: "Student Visa — Subclass 500", description: "Australian student visa for eligible full-time programmes." },
+  "study:United Kingdom": { name: "UK Student Visa", description: "UK student visa to study at a licensed sponsor institution." },
+  "study:Germany": { name: "Germany Student Visa", description: "National visa to study at a recognised German higher-education institution." },
+  "study:Ireland": { name: "Stamp 2 Student Permission", description: "Permission to study a recognised full-time course in Ireland." },
+  "study:United States": { name: "F-1 Student Visa", description: "US student visa for academic studies at SEVP-approved institutions." },
+  "study:New Zealand": { name: "New Zealand Student Visa", description: "Student visa to study a full-time programme in New Zealand." },
+
+  // Scholarships
+  "scholarship:Canada": { name: "Vanier Canada Graduate Scholarships", description: "Prestigious scholarship for doctoral study in Canada." },
+  "scholarship:Australia": { name: "Australia Awards Scholarships", description: "Fully funded scholarships to study at Australian institutions." },
+  "scholarship:United Kingdom": { name: "Chevening Scholarships", description: "UK government's global scholarship for master's study." },
+  "scholarship:Germany": { name: "DAAD Scholarships", description: "German Academic Exchange Service scholarships for international students." },
+  "scholarship:Ireland": { name: "Government of Ireland International Education Scholarships", description: "Scholarship for study at Irish higher-education institutions." },
+  "scholarship:United States": { name: "Fulbright Foreign Student Program", description: "Fulbright scholarships for graduate study in the United States." },
+  "scholarship:New Zealand": { name: "Manaaki New Zealand Scholarships", description: "Government-funded scholarships to study in New Zealand." },
+};
+
+export function getProgram(kind: Kind, country?: string): ProgramMeta {
+  if (country) {
+    const p = PROGRAMS[`${kind}:${country}`];
+    if (p) return p;
+  }
+  const label = KIND_LABEL[kind];
+  return {
+    name: country ? `${label} in ${country}` : label,
+    description: country
+      ? `An international ${label.toLowerCase()} pathway in ${country}.`
+      : `An international ${label.toLowerCase()} pathway.`,
+  };
+}
+
 function baseReasons(ctx: PlanContext): string[] {
   const p = ctx.profile;
   const out: string[] = [];
@@ -109,7 +168,7 @@ const CANADA_PR: OpportunityBlueprint = {
   key: "pr:Canada",
   kind: "pr",
   country: "Canada",
-  displayName: "Express Entry — Canada",
+  displayName: "Express Entry",
   questions: [
     {
       id: "english_test",
@@ -241,7 +300,8 @@ const CANADA_PR: OpportunityBlueprint = {
 
 function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
   const label = KIND_LABEL[kind];
-  const displayName = country ? `${label} in ${country}` : label;
+  const program = country ? PROGRAMS[`${kind}:${country}`] : undefined;
+  const displayName = program?.name ?? (country ? `${label} in ${country}` : label);
 
   const commonProfileStep: PlanStep = {
     id: "profile",

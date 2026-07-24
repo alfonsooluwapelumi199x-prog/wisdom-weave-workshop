@@ -7,7 +7,7 @@ import { tokens as T } from "@/components/forme";
 import { parseJourneyId, resolveBlueprint, type Pending, type Question } from "@/lib/opportunity-plans";
 
 export const Route = createFileRoute("/journey/$id/personalise")({
-  head: () => ({ meta: [{ title: "Complete Your Journey Profile · ForMe" }] }),
+  head: () => ({ meta: [{ title: "Eligibility Questions · ForMe" }] }),
   component: Personalise,
 });
 
@@ -58,7 +58,7 @@ function Personalise() {
           JSON.stringify({ id, kind, country, displayName: blueprint.displayName }),
         );
       } catch { /* ignore */ }
-      navigate({ to: "/auth", replace: true });
+      navigate({ to: "/journey/$id/eligibility", params: { id }, replace: true });
     }
   }, [questions, blueprint, id, kind, country, navigate, storageKey]);
 
@@ -85,7 +85,7 @@ function Personalise() {
           JSON.stringify({ id, kind, country, displayName: blueprint.displayName }),
         );
       } catch { /* ignore */ }
-      navigate({ to: "/auth" });
+      navigate({ to: "/journey/$id/eligibility", params: { id } });
     }
   };
 
@@ -113,12 +113,12 @@ function Personalise() {
             {blueprint.displayName}
           </span>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl" style={{ color: T.text }}>
-            Complete Your Journey Profile
+            Eligibility Questions
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed" style={{ color: T.muted }}>
-            We already know enough to recommend this opportunity. Answer a few
-            additional questions so we can assess your current position more
-            accurately, personalise your roadmap and help you track what comes next.
+            Answer a few additional questions so we can assess your current
+            position against {blueprint.displayName} more accurately. We won't
+            ask anything you've already shared.
           </p>
         </motion.div>
 
@@ -222,7 +222,7 @@ function Personalise() {
             className="h-12 rounded-full border-0 px-7 text-base font-medium text-white transition-transform hover:-translate-y-0.5 disabled:opacity-40"
             style={{ background: T.primary, boxShadow: `0 12px 30px -12px ${T.primary}` }}
           >
-            {safeI < total - 1 ? "Next" : "Create My World"} <ArrowRight className="ml-1.5 h-4 w-4" />
+            {safeI < total - 1 ? "Next" : "See My Eligibility Summary"} <ArrowRight className="ml-1.5 h-4 w-4" />
           </Button>
         </div>
       </div>

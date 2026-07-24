@@ -20,6 +20,7 @@ import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCompleteProfileRouteImport } from './routes/_authenticated/complete-profile'
 import { Route as JourneyIdPersonaliseRouteImport } from './routes/journey.$id.personalise'
+import { Route as JourneyIdEligibilityRouteImport } from './routes/journey.$id.eligibility'
 import { Route as JourneyIdDetailsRouteImport } from './routes/journey.$id.details'
 
 const ResultsRoute = ResultsRouteImport.update({
@@ -77,6 +78,11 @@ const JourneyIdPersonaliseRoute = JourneyIdPersonaliseRouteImport.update({
   path: '/personalise',
   getParentRoute: () => JourneyIdRoute,
 } as any)
+const JourneyIdEligibilityRoute = JourneyIdEligibilityRouteImport.update({
+  id: '/eligibility',
+  path: '/eligibility',
+  getParentRoute: () => JourneyIdRoute,
+} as any)
 const JourneyIdDetailsRoute = JourneyIdDetailsRouteImport.update({
   id: '/details',
   path: '/details',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/journey/$id': typeof JourneyIdRouteWithChildren
   '/journey/$id/details': typeof JourneyIdDetailsRoute
+  '/journey/$id/eligibility': typeof JourneyIdEligibilityRoute
   '/journey/$id/personalise': typeof JourneyIdPersonaliseRoute
 }
 export interface FileRoutesByTo {
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/journey/$id': typeof JourneyIdRouteWithChildren
   '/journey/$id/details': typeof JourneyIdDetailsRoute
+  '/journey/$id/eligibility': typeof JourneyIdEligibilityRoute
   '/journey/$id/personalise': typeof JourneyIdPersonaliseRoute
 }
 export interface FileRoutesById {
@@ -122,6 +130,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/journey/$id': typeof JourneyIdRouteWithChildren
   '/journey/$id/details': typeof JourneyIdDetailsRoute
+  '/journey/$id/eligibility': typeof JourneyIdEligibilityRoute
   '/journey/$id/personalise': typeof JourneyIdPersonaliseRoute
 }
 export interface FileRouteTypes {
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/journey/$id'
     | '/journey/$id/details'
+    | '/journey/$id/eligibility'
     | '/journey/$id/personalise'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/journey/$id'
     | '/journey/$id/details'
+    | '/journey/$id/eligibility'
     | '/journey/$id/personalise'
   id:
     | '__root__'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/journey/$id'
     | '/journey/$id/details'
+    | '/journey/$id/eligibility'
     | '/journey/$id/personalise'
   fileRoutesById: FileRoutesById
 }
@@ -257,6 +269,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JourneyIdPersonaliseRouteImport
       parentRoute: typeof JourneyIdRoute
     }
+    '/journey/$id/eligibility': {
+      id: '/journey/$id/eligibility'
+      path: '/eligibility'
+      fullPath: '/journey/$id/eligibility'
+      preLoaderRoute: typeof JourneyIdEligibilityRouteImport
+      parentRoute: typeof JourneyIdRoute
+    }
     '/journey/$id/details': {
       id: '/journey/$id/details'
       path: '/details'
@@ -283,11 +302,13 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 interface JourneyIdRouteChildren {
   JourneyIdDetailsRoute: typeof JourneyIdDetailsRoute
+  JourneyIdEligibilityRoute: typeof JourneyIdEligibilityRoute
   JourneyIdPersonaliseRoute: typeof JourneyIdPersonaliseRoute
 }
 
 const JourneyIdRouteChildren: JourneyIdRouteChildren = {
   JourneyIdDetailsRoute: JourneyIdDetailsRoute,
+  JourneyIdEligibilityRoute: JourneyIdEligibilityRoute,
   JourneyIdPersonaliseRoute: JourneyIdPersonaliseRoute,
 }
 
