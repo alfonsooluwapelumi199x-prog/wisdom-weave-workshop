@@ -135,6 +135,53 @@ function baseReasons(ctx: PlanContext): string[] {
   return out;
 }
 
+/**
+ * Deterministic signature of the profile inputs that drive the recommendation
+ * set. Used by /loading and /results to decide whether the cached
+ * recommendations still match the current profile.
+ */
+export function profileSignature(p: Pending): string {
+  const parts = [
+    p.main_goal ?? "",
+    p.qualification ?? "",
+    p.profession ?? p.occupation ?? "",
+    [...(p.countries_of_interest ?? [])].sort().join("|"),
+  ];
+  return parts.join("::");
+}
+
+/**
+ * Minimum answers required to pick a personalised next step for a given
+ * opportunity kind. Keys align with the existing questions in each blueprint.
+ */
+export function hasCoreEligibility(ctx: PlanContext): boolean {
+  const a = ctx.answers ?? {};
+  switch (ctx.kind) {
+    case "pr":
+      // Canada PR uses `english_test`; generic PR uses `language_test`.
+      return Boolean((a.english_test || a.language_test) && a.experience);
+    case "work":
+      return Boolean(a.language_test && a.experience);
+    case "study":
+      return Boolean(a.level && a.language_test);
+    case "scholarship":
+      return Boolean(a.level && a.language_test);
+  }
+}
+
+/**
+ * Synthetic "collect eligibility first" step. Returned by `currentStep` when
+ * `hasCoreEligibility` is false, so the Opportunity Plan sends the user
+ * through the existing eligibility-question flow before recommending a
+ * concrete provider or task.
+ */
+export const ELIGIBILITY_STEP: PlanStep = {
+  id: "eligibility",
+  title: "Complete your eligibility details",
+  description:
+    "Complete your eligibility details so ForMe can assess your position and personalise your next step.",
+};
+
 function fillStatuses(steps: PlanStep[], currentId: string, completedIds: string[] = []): Record<string, StepStatus> {
   const out: Record<string, StepStatus> = {};
   let seenCurrent = false;
