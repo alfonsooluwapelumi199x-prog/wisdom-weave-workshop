@@ -1,121 +1,73 @@
-## Goal
 
-Build the "View Journey" experience: after tapping View Journey on the Results page, the user answers a short set of opportunity-specific personalisation questions (one per screen, conversational), then lands on a personalised Opportunity Plan. Existing UI, colours, typography, animations, navigation, landing, onboarding, and Results page stay untouched. Reuse the ForMe component library and white + lilac palette.
+# Signature "Searching the World" Experience
 
-## User flow (unchanged upstream)
+Scope: only `src/routes/loading.tsx` and the discovery mode of `src/components/marketing/globe.tsx`. Landing/hero mode of the globe, all other routes, colors, typography, and layout stay untouched.
 
-Results → View Journey → Personalisation Questions → Opportunity Plan
-Landing, onboarding, and Results are not modified.
+## Goals
 
-## Routes
+- The globe rotates continuously across the whole search.
+- The world always looks alive: multiple regions glow, cities appear and fade, curved paths connect continents, an Opportunity Pulse travels the globe, particles orbit.
+- Every run is different — locations, routes, pulses, and glow order are randomised.
+- Ends by fading the world down and leaving the user's best-fit countries illuminated, then transitions to `/results`.
 
-- `src/routes/journey.$id.personalise.tsx` — new. One conversational question per screen. Progress bar. Header: "Let's make this plan yours. This will take less than one minute." Persists answers to `localStorage` (`forme.journey_answers.<id>`). On completion → `/journey/$id`.
-- `src/routes/journey.$id.tsx` — rewritten to be the Opportunity Plan (the current placeholder journey page is replaced, not redesigned in style — same tokens, same component library, same white/lilac aesthetic). If no personalisation answers exist yet for this id, redirect to `/journey/$id/personalise`.
-- Results page: only change is the `View Journey` button now routes into the personalisation flow via the same `/journey/$id` id (no navigation shape change — the id already exists). No visual change to Results.
+## What changes
 
-## Opportunity model (reusable, no hardcoded country/pathway)
+### 1. Global location library (in `globe.tsx`, discovery mode only)
 
-Add `src/lib/opportunity-plans.ts` — a pure data module the plan page consumes. Everything (questions, steps, resources, mistakes, timing, cost, what's next) is described per opportunity `kind` (`pr` | `work` | `study` | `scholarship`) and optionally per `country`. Structure:
+Replace the fixed 24-city `DISCOVERY_PINS` list with a large curated library (~180–220 entries) of cities/capitals/regional hubs with lat/lon, tagged by region:
 
-```
-type Question = {
-  id: string;
-  prompt: string;
-  helper?: string;
-  options: { value: string; label: string }[];
-};
+- North America, Central America, Caribbean, South America
+- Europe, Middle East, Africa
+- Asia, Oceania
 
-type PlanStep = {
-  id: string;                 // e.g. "english_test"
-  title: string;              // "English language test"
-  description: string;
-  estimatedTime?: string;     // "2–6 weeks"
-  estimatedCost?: string;     // "£180–£250" — omitted if unreliable
-  resources?: Resource[];     // official orgs only
-  mistakes?: string[];        // max 3
-  whatsNext?: string;         // one line
-};
+Project lat/lon → the existing 480×480 SVG band with an equirectangular formula so we can add locations without hand-tuning coordinates. Hero mode keeps its current hand-placed pins unchanged.
 
-type Resource = { name: string; description: string; url: string; official: true };
+### 2. Continuous rotation + always-populated world
 
-type OpportunityBlueprint = {
-  key: string;                          // `${kind}:${country ?? "*"}`
-  kind: "pr" | "work" | "study" | "scholarship";
-  country?: string;
-  displayName: string;                  // "Express Entry — Canada", "Skilled Worker Visa — UK", etc.
-  questions: Question[];                // ONLY what's needed for this opportunity
-  steps: PlanStep[];                    // ordered roadmap
-  // derives status from user's answers + profile, and picks the single current step
-  deriveStatuses: (ctx: PlanContext) => Record<string /* step.id */, "completed"|"in_progress"|"not_started"|"locked">;
-  // derives confidence from answers + profile
-  deriveConfidence: (ctx: PlanContext) => { level: "High"|"Medium"|"Low"; note?: string };
-  // personalised reasons (only from known info)
-  buildReasons: (ctx: PlanContext) => string[];
-};
-```
+- The whole "world layer" (meridians, pins, arcs, pulse) rotates slowly and continuously (≈120s per revolution). Latitude parallels stay static as a subtle grid.
+- At any moment render a rolling window of ~40 pins drawn randomly from the library, refreshed every ~1.6s (some fade out, new ones fade in). Weights favour regional variety so no continent goes dark.
+- Floating labels: show 8–10 city names at once, rotating every ~2s with fade in/out. Names are chosen from the currently-visible pins so labels always match a glowing dot.
+- Region "wash": every ~2.5s a random region gets a soft radial glow overlay that fades out, creating the "different regions glow one after another" effect.
 
-`PlanContext = { profile: Pending; answers: Record<string,string>; country?: string; kind: Kind }`.
+### 3. Opportunity Pulse
 
-The registry resolves an id like `pr-canada` → blueprint. Seed blueprints:
+- A dedicated glowing dot (violet core + lilac halo) that hops between random visible pins along curved arcs generated by the existing `arcPath` helper.
+- New leg every ~1.4s: pick a new destination pin, animate the pulse along the curve, leave a fading trail arc behind for ~2s. Multiple trails can overlap.
+- Runs 2 pulses in parallel with different speeds/colors so the globe always shows purposeful movement, never a spinner feel.
+- Distinct from the ambient dashed arcs, which stay as background texture.
 
-- `pr:Canada` (Express Entry): questions = English test status, work experience band, ECA status. Steps = Profile check → English test → ECA → Express Entry profile → Invitation → PR application.
-- `pr:*` (generic PR fallback): profile check → language test → credential recognition → application.
-- `work:*`: profile check → CV localisation → job search → application → offer/visa.
-- `study:*`: qualification check → shortlist programmes → application materials → applications → visa.
-- `scholarship:*`: eligibility → shortlist → materials → applications.
+### 4. Focus / narrowing phase
 
-Only Canada PR ships with country-specific detail in this pass; every other combination falls back to a generic blueprint using the same schema, so the page is fully populated for any kind/country and adding new opportunities later is a data-only change. No new hardcoded strings inside the page component.
+- Steps 1–3 (see messages below) keep the whole world active.
+- Step 4 gradually dims non-focus pins/arcs to ~10% opacity and keeps a randomised focus set of 4–6 best-fit locations pulsing brighter in violet. The focus set is chosen randomly each run from a "premium destinations" subset (Canada, UK, Ireland, Germany, Netherlands, Sweden, UAE, Singapore, Australia, New Zealand, Japan, US) so results feel plausible but never identical.
+- Step 5 holds that state, then the whole screen fades to `/results` (existing transition kept).
 
-## Personalisation screen (`journey.$id.personalise.tsx`)
+### 5. Message sequence (in `loading.tsx`)
 
-- Reads `id`, resolves blueprint (`pr:Canada` → Canada PR; anything else → generic `<kind>:*`).
-- If blueprint has zero questions → skip straight to `/journey/$id`.
-- One question per screen, framer-motion transition matching existing style, progress dots at top, `Back` / `Next` buttons, uses existing `Button` + tokens.
-- Top eyebrow copy: "Let's make this plan yours." Sub: "This will take less than one minute."
-- Persists to `localStorage["forme.journey_answers." + id]`.
-- Final Next → navigate to `/journey/$id`.
+Replace the current 5 messages with the requested cinematic copy, still crossfading:
 
-## Opportunity Plan page (`journey.$id.tsx`)
+1. "Searching opportunities across the world…"
+2. "Comparing thousands of international pathways…"
+3. "Finding opportunities that match your profile…"
+4. "Building your personalised recommendations…"
+5. "Almost there…"
 
-Reuses existing ForMe components and tokens — no new visual system. Sections top to bottom:
+Milestone dots (●○○○ → ●●●●) and the total duration stay in the same ballpark (~13–14s). Nothing else on the loading screen changes.
 
-1. `CountryHeader` — flag + country + `blueprint.displayName` (falls back to opportunity title when country unknown, e.g. worldwide search).
-2. Opportunity Confidence card — new small component `ConfidenceCard` in `src/components/forme/` displaying `High` / `Medium` / `Low` chip + line "Based on the information you've shared so far." + optional note "Complete more of your profile to improve the accuracy of this recommendation." Uses existing tokens; no new palette.
-3. `WhyFitsCard` — points from `blueprint.buildReasons(ctx)`. Only uses profile + answers; never age/budget/marital/etc.
-4. Your Opportunity Plan — vertical roadmap via existing `JourneyTimeline`, with statuses from `deriveStatuses`. Exactly one step marked `in_progress`.
-5. Your Next Action — `NextActionCard`, large, single button. Title = current step's title; description = current step's description; CTA = "Start This Step" scrolling to the resources section (or opening the first official resource if present).
-6. Estimated Time — small card, `currentStep.estimatedTime` only. Hidden if unset.
-7. Estimated Cost — small card, `currentStep.estimatedCost` only. Hidden if unset.
-8. Official Resources — new component `OfficialResourceCard` (small extension of existing `ResourceCard`) rendering the current step's resources with an "Official" badge, description, and "Open Official Website" button. Only current step's resources shown.
-9. Common Mistakes — new small `MistakesList` component (tokens-based, no redesign) — max 3 items from `currentStep.mistakes`. Hidden if none.
-10. What's Next — plain card with `currentStep.whatsNext`, computed as "After completing <current>, your next step will be <next step title>." Auto-generated from the roadmap when the blueprint doesn't override.
-11. Save Progress — reuses the existing bottom CTA pattern from the current journey page (Save My Journey → `/auth`, Continue Exploring → `/results`). No visual redesign.
+### 6. Randomisation seed
 
-Add `ImproveRecommendationCard` just above the save-progress block, unchanged.
+On mount, generate a per-session seed and use it for: pin selection order, region wash order, pulse routes, focus set, particle phases. Guarantees no two searches feel the same while staying deterministic within one run (avoids React re-render jitter).
 
-## New / touched components (ForMe library)
+## What does NOT change
 
-- add: `src/components/forme/ConfidenceCard.tsx`
-- add: `src/components/forme/OfficialResourceCard.tsx` (wraps existing `ResourceCard` styling; adds "Official" badge and CTA button label)
-- add: `src/components/forme/MistakesList.tsx`
-- export the three from `src/components/forme/index.ts`
-- no changes to existing components' props or visuals.
+- Landing page hero globe (`mode="hero"`) — untouched.
+- Colors, typography, background gradients, wordmark, milestone dots styling.
+- Route flow: `/loading` still auto-navigates to `/results`.
+- All other routes, components, and server functions.
 
-## Files touched
+## Technical notes
 
-- add: `src/routes/journey.$id.personalise.tsx`
-- edit: `src/routes/journey.$id.tsx` (replace body; keep tokens + component library)
-- add: `src/lib/opportunity-plans.ts`
-- add: `src/components/forme/ConfidenceCard.tsx`
-- add: `src/components/forme/OfficialResourceCard.tsx`
-- add: `src/components/forme/MistakesList.tsx`
-- edit: `src/components/forme/index.ts` (barrel exports)
-
-No changes to: landing, onboarding, loading, auth, dashboard, Results page UI, tokens, existing ForMe components, router, or `__root.tsx`.
-
-## Guardrails
-
-- No new dependencies.
-- Never fabricate user data (no assumed age, budget, marital, licensing, English scores) — reasons and confidence use only profile fields + personalisation answers.
-- Only the current step's resources / time / cost / mistakes are shown; other steps stay collapsed in the roadmap.
-- Fully reusable: any kind/country resolves to a blueprint (specific or generic) and populates the same page — no hardcoded Canada/Express Entry in the component.
+- Files touched: `src/components/marketing/globe.tsx` (discovery-mode branch only) and `src/routes/loading.tsx` (message list + slightly longer total duration).
+- Keep everything on Framer Motion + SVG that's already in the file — no new deps.
+- Perf: cap concurrent motion elements to ~40 pins + ~10 labels + 6 ambient arcs + 2 pulses + ~22 particles; use `AnimatePresence` with keyed fade transitions and `will-change: transform` on rotating group.
+- Accessibility: keep the existing `role="img"` and aria-label; respect `prefers-reduced-motion` by slowing rotation to a crawl and disabling pulse hops (still shows a static populated world).
