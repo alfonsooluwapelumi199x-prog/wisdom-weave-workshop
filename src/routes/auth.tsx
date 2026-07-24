@@ -51,7 +51,7 @@ function AuthPage() {
 
   const finish = async () => {
     await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
-    navigate({ to: "/complete-profile" });
+    navigate({ to: "/dashboard" });
   };
 
   const signIn = async (e: React.FormEvent) => {
