@@ -157,6 +157,7 @@ function AuthPage() {
             variant="outline"
             className="h-12 w-full rounded-full border-white/15 bg-white/[0.04] text-base hover:bg-white/[0.08]"
             onClick={google}
+            disabled={loading}
           >
             Continue with Google
           </Button>
@@ -164,6 +165,7 @@ function AuthPage() {
             variant="outline"
             className="h-12 w-full rounded-full border-white/15 bg-white/[0.04] text-base hover:bg-white/[0.08]"
             onClick={apple}
+            disabled={loading}
           >
             Continue with Apple
           </Button>
