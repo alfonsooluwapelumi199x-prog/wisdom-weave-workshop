@@ -257,8 +257,9 @@ const CANADA_PR: OpportunityBlueprint = {
     },
     {
       id: "english_test",
-      title: "English language test",
-      description: "Book and complete an approved English test (IELTS General, CELPIP or PTE Core).",
+      title: "Choose an Approved Language Test",
+      description:
+        "Compare the approved language tests, choose the option that suits you best, and prepare before booking.",
       estimatedTime: "2–6 weeks",
       estimatedCost: "£180–£250",
       resources: [
@@ -311,10 +312,18 @@ const CANADA_PR: OpportunityBlueprint = {
     },
   ]),
   deriveStatuses: (ctx) => {
-    const completed: string[] = ["profile"];
+    // Gate: without minimum eligibility answers we don't pick a concrete step.
+    if (!hasCoreEligibility(ctx)) {
+      const statuses: Record<string, StepStatus> = {};
+      for (const s of CANADA_PR.steps) statuses[s.id] = "not_started";
+      statuses["eligibility"] = "in_progress";
+      return statuses;
+    }
+    const p = ctx.profile;
+    const completed: string[] = [];
+    if (p.qualification && (p.profession ?? p.occupation)) completed.push("profile");
     if (ctx.answers.english_test === "yes") completed.push("english_test");
     if (ctx.answers.eca === "yes") completed.push("eca");
-    // Current is first non-completed step
     const order = ["profile", "english_test", "eca", "ee_profile", "ita", "pr_application"];
     const current = order.find((id) => !completed.includes(id)) ?? "pr_application";
     return fillStatuses(CANADA_PR.steps, current, completed);
