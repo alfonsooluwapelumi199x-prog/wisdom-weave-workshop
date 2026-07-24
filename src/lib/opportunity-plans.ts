@@ -923,6 +923,7 @@ export function parseJourneyId(id: string): { kind: Kind; country?: string } {
 }
 
 export function currentStep(blueprint: OpportunityBlueprint, statuses: Record<string, StepStatus>): PlanStep {
+  if (statuses["eligibility"] === "in_progress") return ELIGIBILITY_STEP;
   const inProgress = blueprint.steps.find((s) => statuses[s.id] === "in_progress");
   return inProgress ?? blueprint.steps[0];
 }
