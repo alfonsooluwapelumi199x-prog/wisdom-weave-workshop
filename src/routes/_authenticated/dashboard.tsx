@@ -386,9 +386,6 @@ function MyWorld() {
         </Section>
 
         {/* Recommended This Week */}
-        {weekly && (
-          <></>
-        )}
         {archived.length > 0 && (
           <Section title="Archived">
             <div className="grid gap-3 sm:grid-cols-2">
