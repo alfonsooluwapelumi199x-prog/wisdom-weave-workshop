@@ -348,6 +348,7 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         helper: country
           ? `Most ${country} pathways require a recent English or local language test.`
           : "Most permanent residence pathways require a recent language test.",
+        why: "Language proficiency is one of the strongest factors in permanent residence eligibility and points systems.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "no", label: "No" },
@@ -355,8 +356,21 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "language_score",
+        prompt: "Do you already have your test score?",
+        helper: "If yes, we'll use it to estimate your points more accurately.",
+        why: "Your exact score determines how many points you're awarded on most PR routes.",
+        options: [
+          { value: "high", label: "Yes — a strong score" },
+          { value: "mid", label: "Yes — a moderate score" },
+          { value: "low", label: "Yes — a lower score" },
+          { value: "no", label: "Not yet" },
+        ],
+      },
+      {
         id: "experience",
         prompt: "How many years of relevant work experience do you have?",
+        why: "Skilled work experience is a major factor in almost every PR points system.",
         options: [
           { value: "<1", label: "Less than 1 year" },
           { value: "1-2", label: "1–2 years" },
@@ -368,6 +382,7 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         id: "credentials",
         prompt: "Have your qualifications been assessed for this country?",
         helper: "Some countries require a credential assessment before applying.",
+        why: "Foreign qualifications usually need to be formally recognised before they count towards eligibility.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "no", label: "No" },
@@ -375,8 +390,65 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "licence",
+        prompt: "Is your profession regulated or licensed in your destination?",
+        helper: "For example: healthcare, engineering, law, teaching.",
+        why: "Regulated professions often need local licensing before you can work.",
+        options: [
+          { value: "yes_have", label: "Yes — I already hold local recognition" },
+          { value: "yes_need", label: "Yes — I still need it" },
+          { value: "no", label: "No — my profession isn't regulated" },
+          { value: "unsure", label: "Not sure" },
+        ],
+      },
+      {
+        id: "passport",
+        prompt: "Do you currently hold a valid passport?",
+        why: "A valid passport is required before submitting any immigration application.",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "expiring", label: "Yes, but expiring soon" },
+          { value: "no", label: "No" },
+        ],
+      },
+      {
+        id: "prior_international",
+        prompt: "Have you previously studied or worked abroad?",
+        why: "Prior international experience can strengthen certain PR applications.",
+        options: [
+          { value: "work", label: "Yes — I've worked abroad" },
+          { value: "study", label: "Yes — I've studied abroad" },
+          { value: "both", label: "Both" },
+          { value: "no", label: "No" },
+        ],
+      },
+      {
+        id: "marital",
+        prompt: "What is your marital status?",
+        helper: "Some PR routes award additional points for spouse qualifications.",
+        why: "A spouse's education or language ability can add points on several PR systems.",
+        options: [
+          { value: "single", label: "Single" },
+          { value: "partner", label: "Partner / Common-law" },
+          { value: "married", label: "Married" },
+          { value: "prefer_not", label: "Prefer not to say" },
+        ],
+      },
+      {
+        id: "dependants",
+        prompt: "Will any dependants be moving with you?",
+        why: "Dependants affect application costs and proof-of-funds requirements.",
+        options: [
+          { value: "none", label: "No dependants" },
+          { value: "1", label: "1 dependant" },
+          { value: "2", label: "2 dependants" },
+          { value: "3+", label: "3 or more" },
+        ],
+      },
+      {
         id: "timeline",
         prompt: "When would you ideally like to move?",
+        why: "Your timeline helps us pace your roadmap and flag time-sensitive steps.",
         options: [
           { value: "0-6", label: "Within 6 months" },
           { value: "6-12", label: "6–12 months" },
@@ -384,11 +456,24 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
           { value: "flexible", label: "I'm flexible" },
         ],
       },
+      {
+        id: "budget",
+        prompt: "What's your approximate budget for this move? (optional)",
+        helper: "Rough range only — this stays private and helps us set realistic milestones.",
+        why: "Application, test, assessment and relocation costs add up. A rough budget helps us plan.",
+        options: [
+          { value: "<5k", label: "Under £5,000" },
+          { value: "5-15k", label: "£5,000–£15,000" },
+          { value: "15k+", label: "£15,000+" },
+          { value: "skip", label: "Prefer not to say" },
+        ],
+      },
     ],
     work: [
       {
         id: "experience",
         prompt: "How many years of relevant work experience do you have?",
+        why: "Most work visas and employers require a minimum level of relevant experience.",
         options: [
           { value: "<1", label: "Less than 1 year" },
           { value: "1-2", label: "1–2 years" },
@@ -399,6 +484,7 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
       {
         id: "sponsorship",
         prompt: "Do you need visa sponsorship?",
+        why: "Some employers only consider candidates who already have work rights.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "no", label: "No" },
@@ -408,6 +494,7 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
       {
         id: "language_test",
         prompt: "Have you completed a language test recognised in your destination?",
+        why: "Some work visas require proof of language ability at a minimum level.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "no", label: "No" },
@@ -415,8 +502,54 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "language_score",
+        prompt: "Do you already have your test score?",
+        helper: "Optional — helps us judge whether you meet visa thresholds.",
+        why: "Your exact score determines whether you clear common work-visa language minimums.",
+        options: [
+          { value: "high", label: "Yes — a strong score" },
+          { value: "mid", label: "Yes — a moderate score" },
+          { value: "low", label: "Yes — a lower score" },
+          { value: "no", label: "Not yet" },
+        ],
+      },
+      {
+        id: "licence",
+        prompt: "Is your profession regulated or licensed abroad?",
+        helper: "For example: healthcare, engineering, law, teaching, finance.",
+        why: "Regulated professions may need local recognition before you can start work.",
+        options: [
+          { value: "yes_have", label: "Yes — I already hold recognition" },
+          { value: "yes_need", label: "Yes — I still need it" },
+          { value: "no", label: "No" },
+          { value: "unsure", label: "Not sure" },
+        ],
+      },
+      {
+        id: "passport",
+        prompt: "Do you currently hold a valid passport?",
+        why: "You'll need a valid passport before any work visa can be issued.",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "expiring", label: "Yes, but expiring soon" },
+          { value: "no", label: "No" },
+        ],
+      },
+      {
+        id: "prior_international",
+        prompt: "Have you previously worked or studied abroad?",
+        why: "International experience can strengthen your CV for global employers.",
+        options: [
+          { value: "work", label: "Yes — worked abroad" },
+          { value: "study", label: "Yes — studied abroad" },
+          { value: "both", label: "Both" },
+          { value: "no", label: "No" },
+        ],
+      },
+      {
         id: "timeline",
         prompt: "When would you like to start working abroad?",
+        why: "Your timeline determines which roles and visa routes are realistic.",
         options: [
           { value: "0-3", label: "Within 3 months" },
           { value: "3-6", label: "3–6 months" },
@@ -429,6 +562,7 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
       {
         id: "level",
         prompt: "What level of study are you considering?",
+        why: "Programme requirements, funding and visa rules differ by study level.",
         options: [
           { value: "bachelor", label: "Bachelor's" },
           { value: "master", label: "Master's" },
@@ -437,8 +571,21 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "grades",
+        prompt: "How would you describe your most recent academic results?",
+        helper: "A rough sense is fine — this helps us match realistic programmes.",
+        why: "Programmes and scholarships often have minimum grade requirements.",
+        options: [
+          { value: "top", label: "Top of my cohort" },
+          { value: "strong", label: "Strong" },
+          { value: "average", label: "Average" },
+          { value: "mixed", label: "Mixed" },
+        ],
+      },
+      {
         id: "language_test",
         prompt: "Have you completed an approved language test?",
+        why: "Most universities require proof of language proficiency for admission.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "no", label: "No" },
@@ -446,8 +593,21 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "language_score",
+        prompt: "Do you already have your test score?",
+        helper: "Optional — helps us match programmes you'd qualify for today.",
+        why: "Universities set specific minimum scores for admission.",
+        options: [
+          { value: "high", label: "Yes — a strong score" },
+          { value: "mid", label: "Yes — a moderate score" },
+          { value: "low", label: "Yes — a lower score" },
+          { value: "no", label: "Not yet" },
+        ],
+      },
+      {
         id: "budget",
         prompt: "What is your approximate annual budget?",
+        why: "Tuition and living costs vary widely — your budget shapes what's realistic.",
         options: [
           { value: "<10k", label: "Under £10,000" },
           { value: "10-25k", label: "£10,000–£25,000" },
@@ -456,8 +616,29 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "passport",
+        prompt: "Do you currently hold a valid passport?",
+        why: "You'll need a valid passport for your student visa application.",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "expiring", label: "Yes, but expiring soon" },
+          { value: "no", label: "No" },
+        ],
+      },
+      {
+        id: "prior_international",
+        prompt: "Have you previously studied abroad?",
+        why: "Prior international study can strengthen future applications.",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "exchange", label: "Only a short exchange" },
+          { value: "no", label: "No" },
+        ],
+      },
+      {
         id: "intake",
         prompt: "Which intake are you targeting?",
+        why: "Deadlines and preparation time depend on the intake you're aiming for.",
         options: [
           { value: "next", label: "Next available" },
           { value: "6-12m", label: "In 6–12 months" },
@@ -469,6 +650,7 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
       {
         id: "level",
         prompt: "What level of study is the scholarship for?",
+        why: "Different scholarships target different study levels.",
         options: [
           { value: "bachelor", label: "Bachelor's" },
           { value: "master", label: "Master's" },
@@ -476,8 +658,21 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "grades",
+        prompt: "How would you describe your academic results?",
+        helper: "Most scholarships weigh grades heavily.",
+        why: "Academic results are usually one of the top scholarship selection criteria.",
+        options: [
+          { value: "top", label: "Top of my cohort" },
+          { value: "strong", label: "Strong" },
+          { value: "average", label: "Average" },
+          { value: "mixed", label: "Mixed" },
+        ],
+      },
+      {
         id: "field",
         prompt: "Is your field of study confirmed?",
+        why: "Most scholarships are tied to specific fields or research areas.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "shortlist", label: "I have a shortlist" },
@@ -487,6 +682,7 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
       {
         id: "language_test",
         prompt: "Have you completed an approved language test?",
+        why: "Most scholarships require proof of language proficiency.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "no", label: "No" },
@@ -494,8 +690,31 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
         ],
       },
       {
+        id: "language_score",
+        prompt: "Do you already have your test score?",
+        helper: "Optional — helps us judge whether you clear scholarship minimums.",
+        why: "Scholarships often set a specific minimum score.",
+        options: [
+          { value: "high", label: "Yes — a strong score" },
+          { value: "mid", label: "Yes — a moderate score" },
+          { value: "low", label: "Yes — a lower score" },
+          { value: "no", label: "Not yet" },
+        ],
+      },
+      {
+        id: "funding_need",
+        prompt: "How much of your costs would the scholarship need to cover?",
+        why: "Some scholarships are partial and some are fully funded — this narrows the shortlist.",
+        options: [
+          { value: "full", label: "Fully funded (tuition + living)" },
+          { value: "tuition", label: "Tuition only" },
+          { value: "partial", label: "Any contribution helps" },
+        ],
+      },
+      {
         id: "references",
         prompt: "Do you have academic references ready?",
+        why: "Most scholarships require two or more strong academic references.",
         options: [
           { value: "yes", label: "Yes" },
           { value: "partial", label: "Partially" },
