@@ -109,7 +109,7 @@ const CANADA_PR: OpportunityBlueprint = {
   key: "pr:Canada",
   kind: "pr",
   country: "Canada",
-  displayName: "Express Entry — Canada",
+  displayName: "Express Entry",
   questions: [
     {
       id: "english_test",
