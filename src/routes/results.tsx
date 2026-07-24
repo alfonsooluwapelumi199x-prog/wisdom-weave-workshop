@@ -12,6 +12,7 @@ import {
   ImproveRecommendationCard,
   EmptyState,
 } from "@/components/forme";
+import { getProgram } from "@/lib/opportunity-plans";
 
 export const Route = createFileRoute("/results")({
   head: () => ({ meta: [{ title: "Your Opportunities · ForMe" }] }),
@@ -45,6 +46,7 @@ type Card = {
   flag?: string;
   country?: string;
   title: string;
+  programName: string;
   tagline: string;
   reasons: string[];
 };
@@ -66,13 +68,6 @@ const GOAL_LABEL: Record<string, string> = {
   Scholarships: "Scholarship Opportunities",
 };
 
-const OPPORTUNITY_TITLE: Record<Card["kind"], (country: string) => string> = {
-  pr: (c) => `Permanent Residence in ${c}`,
-  work: (c) => `Work in ${c}`,
-  study: (c) => `Study in ${c}`,
-  scholarship: (c) => `Scholarships in ${c}`,
-};
-
 const KIND_LABEL: Record<Card["kind"], string> = {
   pr: "Permanent Residence",
   work: "Work",
@@ -80,29 +75,15 @@ const KIND_LABEL: Record<Card["kind"], string> = {
   scholarship: "Scholarship",
 };
 
-function buildReasons(p: Pending, country: string, kindLabel: string): string[] {
+function buildReasons(p: Pending, country: string, programName: string): string[] {
   const reasons: string[] = [];
-  if (p.main_goal) reasons.push(`Your selected goal is ${p.main_goal}.`);
-  if (p.qualification) reasons.push(`Your education (${p.qualification}) aligns with this opportunity.`);
+  reasons.push(`${programName} may be relevant to your stated goal${p.main_goal ? ` of ${p.main_goal.toLowerCase()}` : ""}.`);
+  if (p.qualification) reasons.push(`Your education (${p.qualification}) aligns with ${programName}.`);
   if (p.profession ?? p.occupation)
-    reasons.push(`Your profession (${p.profession ?? p.occupation}) may align with this ${kindLabel.toLowerCase()} pathway.`);
+    reasons.push(`Your profession (${p.profession ?? p.occupation}) may align with ${programName}.`);
   if ((p.countries_of_interest ?? []).includes(country))
     reasons.push(`${country} is one of your preferred destinations.`);
   return reasons;
-}
-
-function buildTagline(p: Pending, country: string, kind: Card["kind"]): string {
-  const bg = p.profession || p.occupation ? `with your background` : "for candidates like you";
-  switch (kind) {
-    case "pr":
-      return `${country} offers permanent residence pathways ${bg}.`;
-    case "work":
-      return `${country} has employer-sponsored routes ${bg}.`;
-    case "study":
-      return `${country} offers study pathways ${bg}, with post-study opportunities to remain.`;
-    case "scholarship":
-      return `Funded study opportunities in ${country} may be available ${bg}.`;
-  }
 }
 
 function buildRecommendations(p: Pending): { work: Card[]; study: Card[]; scholarship: Card[]; pr: Card[] } {
@@ -113,15 +94,19 @@ function buildRecommendations(p: Pending): { work: Card[]; study: Card[]; schola
     ? ["Canada", "Australia", "Germany", "United Kingdom", "Ireland", "United States", "New Zealand"]
     : interests.filter((c) => c !== "Other");
 
-  const makeCard = (kind: Card["kind"]) => (country: string): Card => ({
-    id: `${kind}-${country.toLowerCase().replace(/\s+/g, "-")}`,
-    kind,
-    flag: COUNTRY_META[country]?.flag,
-    country,
-    title: OPPORTUNITY_TITLE[kind](country),
-    tagline: buildTagline(p, country, kind),
-    reasons: buildReasons(p, country, KIND_LABEL[kind]),
-  });
+  const makeCard = (kind: Card["kind"]) => (country: string): Card => {
+    const program = getProgram(kind, country);
+    return {
+      id: `${kind}-${country.toLowerCase().replace(/\s+/g, "-")}`,
+      kind,
+      flag: COUNTRY_META[country]?.flag,
+      country,
+      title: program.name,
+      programName: program.name,
+      tagline: program.description,
+      reasons: buildReasons(p, country, program.name),
+    };
+  };
 
   const work = targetCountries.map(makeCard("work"));
   const study = targetCountries.map(makeCard("study"));
@@ -276,14 +261,14 @@ function Results() {
                       id: chosen.id,
                       kind: chosen.kind,
                       country: chosen.country,
-                      displayName: chosen.title,
+                      displayName: chosen.programName,
                       flag: chosen.flag,
                     }),
                   );
                 }
                 localStorage.setItem(
                   "forme.recommendations",
-                  JSON.stringify(all.map((c) => ({ id: c.id, kind: c.kind, country: c.country, displayName: c.title, flag: c.flag }))),
+                  JSON.stringify(all.map((c) => ({ id: c.id, kind: c.kind, country: c.country, displayName: c.programName, flag: c.flag }))),
                 );
               } catch { /* ignore */ }
               navigate({ to: "/journey/$id/details", params: { id } });
