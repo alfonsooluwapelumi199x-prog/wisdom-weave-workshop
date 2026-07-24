@@ -387,6 +387,41 @@ function MyWorld() {
 
         {/* Recommended This Week */}
         {weekly && (
+          <></>
+        )}
+        {archived.length > 0 && (
+          <Section title="Archived">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {archived.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex items-center justify-between rounded-2xl p-4"
+                  style={{ background: T.surface, border: `1px solid ${T.border}` }}
+                >
+                  <div className="flex items-center gap-3">
+                    {o.flag && <span className="text-xl" aria-hidden>{o.flag}</span>}
+                    <div>
+                      <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: T.muted }}>
+                        {o.country ?? KIND_LABEL[o.kind]}
+                      </div>
+                      <div className="text-[14px] font-medium" style={{ color: T.text }}>
+                        {o.displayName}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUnarchive(o)}
+                    className="text-[12px] font-medium uppercase tracking-[0.18em]"
+                    style={{ color: T.primary }}
+                  >
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+        {weekly && (
           <Section title="Recommended This Week">
             <div
               className="rounded-3xl p-7"
