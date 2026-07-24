@@ -168,7 +168,7 @@ const CANADA_PR: OpportunityBlueprint = {
   key: "pr:Canada",
   kind: "pr",
   country: "Canada",
-  displayName: "Express Entry",
+  displayName: "Federal Skilled Worker Program — Express Entry",
   questions: [
     {
       id: "english_test",
