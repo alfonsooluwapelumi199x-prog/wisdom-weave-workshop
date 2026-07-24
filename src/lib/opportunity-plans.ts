@@ -339,12 +339,177 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
 
   const steps = autoWhatsNext(stepsByKind[kind]);
 
+  const questionsByKind: Record<Kind, Question[]> = {
+    pr: [
+      {
+        id: "language_test",
+        prompt: "Have you completed an approved language test?",
+        helper: country
+          ? `Most ${country} pathways require a recent English or local language test.`
+          : "Most permanent residence pathways require a recent language test.",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+          { value: "planning", label: "Planning to" },
+        ],
+      },
+      {
+        id: "experience",
+        prompt: "How many years of relevant work experience do you have?",
+        options: [
+          { value: "<1", label: "Less than 1 year" },
+          { value: "1-2", label: "1–2 years" },
+          { value: "3-5", label: "3–5 years" },
+          { value: "5+", label: "5+ years" },
+        ],
+      },
+      {
+        id: "credentials",
+        prompt: "Have your qualifications been assessed for this country?",
+        helper: "Some countries require a credential assessment before applying.",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+          { value: "unsure", label: "Not sure" },
+        ],
+      },
+      {
+        id: "timeline",
+        prompt: "When would you ideally like to move?",
+        options: [
+          { value: "0-6", label: "Within 6 months" },
+          { value: "6-12", label: "6–12 months" },
+          { value: "1-2y", label: "1–2 years" },
+          { value: "flexible", label: "I'm flexible" },
+        ],
+      },
+    ],
+    work: [
+      {
+        id: "experience",
+        prompt: "How many years of relevant work experience do you have?",
+        options: [
+          { value: "<1", label: "Less than 1 year" },
+          { value: "1-2", label: "1–2 years" },
+          { value: "3-5", label: "3–5 years" },
+          { value: "5+", label: "5+ years" },
+        ],
+      },
+      {
+        id: "sponsorship",
+        prompt: "Do you need visa sponsorship?",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+          { value: "unsure", label: "Not sure" },
+        ],
+      },
+      {
+        id: "language_test",
+        prompt: "Have you completed a language test recognised in your destination?",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+          { value: "not_required", label: "Not required" },
+        ],
+      },
+      {
+        id: "timeline",
+        prompt: "When would you like to start working abroad?",
+        options: [
+          { value: "0-3", label: "Within 3 months" },
+          { value: "3-6", label: "3–6 months" },
+          { value: "6-12", label: "6–12 months" },
+          { value: "flexible", label: "I'm flexible" },
+        ],
+      },
+    ],
+    study: [
+      {
+        id: "level",
+        prompt: "What level of study are you considering?",
+        options: [
+          { value: "bachelor", label: "Bachelor's" },
+          { value: "master", label: "Master's" },
+          { value: "phd", label: "PhD / Doctorate" },
+          { value: "other", label: "Other" },
+        ],
+      },
+      {
+        id: "language_test",
+        prompt: "Have you completed an approved language test?",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+          { value: "planning", label: "Planning to" },
+        ],
+      },
+      {
+        id: "budget",
+        prompt: "What is your approximate annual budget?",
+        options: [
+          { value: "<10k", label: "Under £10,000" },
+          { value: "10-25k", label: "£10,000–£25,000" },
+          { value: "25k+", label: "£25,000+" },
+          { value: "scholarship", label: "I need a scholarship" },
+        ],
+      },
+      {
+        id: "intake",
+        prompt: "Which intake are you targeting?",
+        options: [
+          { value: "next", label: "Next available" },
+          { value: "6-12m", label: "In 6–12 months" },
+          { value: "1y+", label: "More than a year away" },
+        ],
+      },
+    ],
+    scholarship: [
+      {
+        id: "level",
+        prompt: "What level of study is the scholarship for?",
+        options: [
+          { value: "bachelor", label: "Bachelor's" },
+          { value: "master", label: "Master's" },
+          { value: "phd", label: "PhD / Doctorate" },
+        ],
+      },
+      {
+        id: "field",
+        prompt: "Is your field of study confirmed?",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "shortlist", label: "I have a shortlist" },
+          { value: "no", label: "Not yet" },
+        ],
+      },
+      {
+        id: "language_test",
+        prompt: "Have you completed an approved language test?",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "no", label: "No" },
+          { value: "planning", label: "Planning to" },
+        ],
+      },
+      {
+        id: "references",
+        prompt: "Do you have academic references ready?",
+        options: [
+          { value: "yes", label: "Yes" },
+          { value: "partial", label: "Partially" },
+          { value: "no", label: "Not yet" },
+        ],
+      },
+    ],
+  };
+
   return {
     key: `${kind}:${country ?? "*"}`,
     kind,
     country,
     displayName,
-    questions: [],
+    questions: questionsByKind[kind],
     steps,
     deriveStatuses: () => fillStatuses(steps, steps[0].id, []),
     deriveConfidence: (ctx) => {
