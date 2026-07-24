@@ -51,7 +51,7 @@ function AuthPage() {
 
   const finish = async () => {
     await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
-    navigate({ to: "/dashboard" });
+    navigate({ to: "/complete-profile" });
   };
 
   const signIn = async (e: React.FormEvent) => {
@@ -122,18 +122,8 @@ function AuthPage() {
           Let's save your journey.
         </h1>
         <p className="mt-3 text-[14px] leading-relaxed text-foreground/65">
-          We can only search the world for the best opportunities if we know more about you.
+          We already know enough to discover opportunities for you. Create your free account so we can save your journey, track your progress and personalise your next steps.
         </p>
-        <p className="mt-4 text-[13px] font-medium tracking-tight text-foreground/80">
-          Create your free account to:
-        </p>
-        <ul className="mt-3 space-y-1.5 text-[14px] leading-relaxed text-foreground/70">
-          <li>• Save your Opportunity Plan</li>
-          <li>• Continue where you left off</li>
-          <li>• Receive personalised opportunity updates</li>
-          <li>• Improve your recommendations over time</li>
-          <li>• Track your progress</li>
-        </ul>
 
         <div className="mt-8 space-y-3">
           <Button
