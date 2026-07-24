@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as JourneyIdRouteImport } from './routes/journey.$id'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCompleteProfileRouteImport } from './routes/_authenticated/complete-profile'
 import { Route as JourneyIdPersonaliseRouteImport } from './routes/journey.$id.personalise'
 
 const ResultsRoute = ResultsRouteImport.update({
@@ -64,6 +65,12 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCompleteProfileRoute =
+  AuthenticatedCompleteProfileRouteImport.update({
+    id: '/complete-profile',
+    path: '/complete-profile',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const JourneyIdPersonaliseRoute = JourneyIdPersonaliseRouteImport.update({
   id: '/personalise',
   path: '/personalise',
@@ -76,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/loading': typeof LoadingRoute
   '/onboarding': typeof OnboardingRoute
   '/results': typeof ResultsRoute
+  '/complete-profile': typeof AuthenticatedCompleteProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/api/chat': typeof ApiChatRoute
   '/journey/$id': typeof JourneyIdRouteWithChildren
@@ -87,6 +95,7 @@ export interface FileRoutesByTo {
   '/loading': typeof LoadingRoute
   '/onboarding': typeof OnboardingRoute
   '/results': typeof ResultsRoute
+  '/complete-profile': typeof AuthenticatedCompleteProfileRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/api/chat': typeof ApiChatRoute
   '/journey/$id': typeof JourneyIdRouteWithChildren
@@ -100,6 +109,7 @@ export interface FileRoutesById {
   '/loading': typeof LoadingRoute
   '/onboarding': typeof OnboardingRoute
   '/results': typeof ResultsRoute
+  '/_authenticated/complete-profile': typeof AuthenticatedCompleteProfileRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/api/chat': typeof ApiChatRoute
   '/journey/$id': typeof JourneyIdRouteWithChildren
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
     | '/loading'
     | '/onboarding'
     | '/results'
+    | '/complete-profile'
     | '/dashboard'
     | '/api/chat'
     | '/journey/$id'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '/loading'
     | '/onboarding'
     | '/results'
+    | '/complete-profile'
     | '/dashboard'
     | '/api/chat'
     | '/journey/$id'
@@ -136,6 +148,7 @@ export interface FileRouteTypes {
     | '/loading'
     | '/onboarding'
     | '/results'
+    | '/_authenticated/complete-profile'
     | '/_authenticated/dashboard'
     | '/api/chat'
     | '/journey/$id'
@@ -218,6 +231,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/complete-profile': {
+      id: '/_authenticated/complete-profile'
+      path: '/complete-profile'
+      fullPath: '/complete-profile'
+      preLoaderRoute: typeof AuthenticatedCompleteProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/journey/$id/personalise': {
       id: '/journey/$id/personalise'
       path: '/personalise'
@@ -229,10 +249,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedCompleteProfileRoute: typeof AuthenticatedCompleteProfileRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCompleteProfileRoute: AuthenticatedCompleteProfileRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
 }
 

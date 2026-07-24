@@ -173,7 +173,7 @@ function MyWorld() {
               </p>
             </div>
             <Button
-              onClick={() => navigate({ to: "/onboarding" })}
+              onClick={() => navigate({ to: "/complete-profile" })}
               className="h-11 shrink-0 rounded-full border-0 px-6 text-[14px] font-medium text-white"
               style={{ background: T.primary }}
             >
