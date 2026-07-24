@@ -847,7 +847,49 @@ function genericBlueprint(kind: Kind, country?: string): OpportunityBlueprint {
     displayName,
     questions: questionsByKind[kind],
     steps,
-    deriveStatuses: () => fillStatuses(steps, steps[0].id, []),
+    deriveStatuses: (ctx) => {
+      if (!hasCoreEligibility(ctx)) {
+        const statuses: Record<string, StepStatus> = {};
+        for (const s of steps) statuses[s.id] = "not_started";
+        statuses["eligibility"] = "in_progress";
+        return statuses;
+      }
+      const a = ctx.answers ?? {};
+      // For each step, determine whether the corresponding eligibility answer
+      // marks it satisfied. Steps without a matching answer key are treated as
+      // not-yet-satisfied so we don't skip past them.
+      const isSatisfied = (id: string): boolean => {
+        switch (id) {
+          case "profile":
+            return Boolean(ctx.profile.qualification && (ctx.profile.profession ?? ctx.profile.occupation));
+          case "language":
+          case "language_test":
+            return a.language_test === "yes" || a.language_test === "not_required";
+          case "credentials":
+            return a.credentials === "yes";
+          case "cv":
+            return false;
+          case "search":
+          case "offer":
+            return false;
+          case "shortlist":
+          case "materials":
+          case "apply":
+          case "eligibility":
+            return false;
+          default:
+            return false;
+        }
+      };
+      const completed: string[] = [];
+      let current: string | undefined;
+      for (const s of steps) {
+        if (isSatisfied(s.id)) completed.push(s.id);
+        else { current = s.id; break; }
+      }
+      if (!current) current = steps[steps.length - 1].id;
+      return fillStatuses(steps, current, completed);
+    },
     deriveConfidence: (ctx) => {
       const p = ctx.profile;
       let score = 0;
