@@ -55,16 +55,20 @@ function AuthPage() {
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!cancelled && data.session) {
-        await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
         navigate({ to: "/dashboard", replace: true });
+        void persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>)
+          .catch((err) => console.error("Background save failed", err));
       }
     })();
     return () => { cancelled = true; };
   }, [navigate, save]);
 
-  const finish = async () => {
-    await persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>);
+  const finish = () => {
+    // Navigate immediately — the server save runs in the background so a
+    // slow/failed call never blocks the CTA.
     navigate({ to: "/dashboard" });
+    void persistPending(save as unknown as (args: { data: unknown }) => Promise<unknown>)
+      .catch((err) => console.error("Background save failed", err));
   };
 
   const signIn = async (e: React.FormEvent) => {
@@ -75,7 +79,7 @@ function AuthPage() {
       setLoading(false);
       return toast.error(error.message);
     }
-    await finish();
+    finish();
   };
 
   const signUp = async (e: React.FormEvent) => {
@@ -94,25 +98,35 @@ function AuthPage() {
       return toast.error(error.message);
     }
     toast.success("Account created — welcome!");
-    await finish();
+    finish();
   };
 
   const google = async () => {
-    const res = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (res.error) return toast.error(res.error.message);
-    if (res.redirected) return;
-    await finish();
+    setLoading(true);
+    try {
+      const res = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+      });
+      if (res.error) return toast.error(res.error.message);
+      if (res.redirected) return;
+      finish();
+    } finally {
+      setLoading(false);
+    }
   };
 
   const apple = async () => {
-    const res = await lovable.auth.signInWithOAuth("apple", {
-      redirect_uri: window.location.origin,
-    });
-    if (res.error) return toast.error(res.error.message);
-    if (res.redirected) return;
-    await finish();
+    setLoading(true);
+    try {
+      const res = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: window.location.origin,
+      });
+      if (res.error) return toast.error(res.error.message);
+      if (res.redirected) return;
+      finish();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
