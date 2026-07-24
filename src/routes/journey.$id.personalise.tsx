@@ -4,10 +4,10 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { tokens as T } from "@/components/forme";
-import { parseJourneyId, resolveBlueprint } from "@/lib/opportunity-plans";
+import { parseJourneyId, resolveBlueprint, type Pending, type Question } from "@/lib/opportunity-plans";
 
 export const Route = createFileRoute("/journey/$id/personalise")({
-  head: () => ({ meta: [{ title: "Personalise your plan · ForMe" }] }),
+  head: () => ({ meta: [{ title: "Complete Your Journey Profile · ForMe" }] }),
   component: Personalise,
 });
 
@@ -20,17 +20,37 @@ function Personalise() {
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [i, setI] = useState(0);
+  const [pending, setPending] = useState<Pending | null>(null);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) setAnswers(JSON.parse(raw));
     } catch { /* ignore */ }
+    try {
+      const rawP = localStorage.getItem("forme.pending_profile");
+      if (rawP) setPending(JSON.parse(rawP));
+    } catch { /* ignore */ }
   }, [storageKey]);
+
+  // Filter out any question whose data we already know from the initial
+  // discovery profile (never re-ask the original six discovery questions,
+  // and skip anything derivable from them).
+  const questions: Question[] = useMemo(() => {
+    const p = pending ?? {};
+    const known = new Set<string>();
+    if (p.country_of_residence) known.add("country_of_residence");
+    if (p.nationality) known.add("nationality");
+    if (p.qualification) { known.add("qualification"); known.add("level"); }
+    if (p.profession ?? p.occupation) known.add("profession");
+    if (p.main_goal) known.add("main_goal");
+    if ((p.countries_of_interest ?? []).length > 0) known.add("countries_of_interest");
+    return blueprint.questions.filter((q) => !known.has(q.id));
+  }, [blueprint, pending]);
 
   // If there are no questions for this opportunity, skip straight to account creation.
   useEffect(() => {
-    if (blueprint.questions.length === 0) {
+    if (questions.length === 0) {
       try { localStorage.setItem(storageKey, JSON.stringify({})); } catch { /* ignore */ }
       try {
         localStorage.setItem(
@@ -40,12 +60,13 @@ function Personalise() {
       } catch { /* ignore */ }
       navigate({ to: "/auth", replace: true });
     }
-  }, [blueprint, id, kind, country, navigate, storageKey]);
+  }, [questions, blueprint, id, kind, country, navigate, storageKey]);
 
-  if (blueprint.questions.length === 0) return null;
+  if (questions.length === 0) return null;
 
-  const q = blueprint.questions[i];
-  const total = blueprint.questions.length;
+  const safeI = Math.min(i, questions.length - 1);
+  const q = questions[safeI];
+  const total = questions.length;
   const selected = answers[q.id];
 
   const persist = (next: Record<string, string>) => {
@@ -56,7 +77,7 @@ function Personalise() {
   const onSelect = (value: string) => persist({ ...answers, [q.id]: value });
 
   const onNext = () => {
-    if (i < total - 1) setI(i + 1);
+    if (safeI < total - 1) setI(safeI + 1);
     else {
       try {
         localStorage.setItem(
@@ -69,7 +90,7 @@ function Personalise() {
   };
 
   const onBack = () => {
-    if (i > 0) setI(i - 1);
+    if (safeI > 0) setI(safeI - 1);
     else navigate({ to: "/results" });
   };
 
@@ -92,22 +113,24 @@ function Personalise() {
             {blueprint.displayName}
           </span>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl" style={{ color: T.text }}>
-            Let's make this plan yours.
+            Complete Your Journey Profile
           </h1>
-          <p className="mt-3 text-base" style={{ color: T.muted }}>
-            This will take less than one minute.
+          <p className="mx-auto mt-3 max-w-xl text-base leading-relaxed" style={{ color: T.muted }}>
+            We already know enough to recommend this opportunity. Answer a few
+            additional questions so we can assess your current position more
+            accurately, personalise your roadmap and help you track what comes next.
           </p>
         </motion.div>
 
         {/* Progress */}
         <div className="mt-10 flex items-center justify-center gap-1.5">
-          {blueprint.questions.map((_, idx) => (
+          {questions.map((_, idx) => (
             <span
               key={idx}
               className="h-1.5 rounded-full transition-all"
               style={{
-                width: idx === i ? 28 : 10,
-                background: idx <= i ? T.primary : T.border,
+                width: idx === safeI ? 28 : 10,
+                background: idx <= safeI ? T.primary : T.border,
               }}
             />
           ))}
@@ -131,7 +154,7 @@ function Personalise() {
               }}
             >
               <div className="text-[11px] uppercase tracking-[0.2em]" style={{ color: T.muted }}>
-                Question {i + 1} of {total}
+                Question {safeI + 1} of {total}
               </div>
               <h2 className="mt-3 text-2xl font-semibold leading-tight tracking-tight" style={{ color: T.text }}>
                 {q.prompt}
@@ -140,6 +163,15 @@ function Personalise() {
                 <p className="mt-2 text-sm" style={{ color: T.muted }}>
                   {q.helper}
                 </p>
+              )}
+              {q.why && (
+                <div
+                  className="mt-4 rounded-xl px-4 py-3 text-[13px] leading-relaxed"
+                  style={{ background: T.surface, color: T.muted, border: `1px solid ${T.border}` }}
+                >
+                  <span className="font-medium" style={{ color: T.text }}>Why we ask:</span>{" "}
+                  {q.why}
+                </div>
               )}
 
               <div className="mt-6 space-y-2.5">
@@ -190,7 +222,7 @@ function Personalise() {
             className="h-12 rounded-full border-0 px-7 text-base font-medium text-white transition-transform hover:-translate-y-0.5 disabled:opacity-40"
             style={{ background: T.primary, boxShadow: `0 12px 30px -12px ${T.primary}` }}
           >
-            {i < total - 1 ? "Next" : "Create My Account"} <ArrowRight className="ml-1.5 h-4 w-4" />
+            {safeI < total - 1 ? "Next" : "Create My World"} <ArrowRight className="ml-1.5 h-4 w-4" />
           </Button>
         </div>
       </div>
