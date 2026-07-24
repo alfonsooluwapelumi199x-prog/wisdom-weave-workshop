@@ -117,7 +117,7 @@ function JourneyPage() {
           eyebrow="Your Next Action"
           title={active.title}
           description={active.description}
-          ctaLabel="Complete My Journey Profile"
+          ctaLabel="Check My Eligibility"
           onCta={openJourneyProfile}
         />
 
@@ -164,7 +164,7 @@ function JourneyPage() {
         )}
 
         <ImproveRecommendationCard
-          ctaLabel="Complete My Journey Profile"
+          ctaLabel="Check My Eligibility"
           onImprove={openJourneyProfile}
         />
 
