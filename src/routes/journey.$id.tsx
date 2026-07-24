@@ -117,7 +117,7 @@ function JourneyPage() {
           eyebrow="Your Next Action"
           title={active.title}
           description={active.description}
-          ctaLabel="Check My Eligibility"
+          ctaLabel={active.id === "eligibility" ? "Complete Eligibility Details" : "Check My Eligibility"}
           onCta={openJourneyProfile}
         />
 
