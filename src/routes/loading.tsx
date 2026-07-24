@@ -17,41 +17,49 @@ type Step = {
 
 const STEPS: Step[] = [
   {
-    message: "Searching the world for opportunities made for you…",
+    message: "Searching opportunities across the world…",
     duration: 3000,
     dots: 1,
   },
   {
-    message: "Understanding your profile…",
+    message: "Comparing thousands of international pathways…",
     duration: 3000,
     dots: 2,
   },
   {
-    message: "Finding your strongest matches…",
-    duration: 3000,
+    message: "Finding opportunities that match your profile…",
+    duration: 3200,
     dots: 3,
+  },
+  {
+    message: "Building your personalised recommendations…",
+    duration: 3000,
+    dots: 4,
     focusPins: [
       "Toronto",
       "London",
-      "Dublin",
       "Berlin",
-      "Stockholm",
+      "Amsterdam",
+      "Dubai",
+      "Singapore",
       "Sydney",
       "Auckland",
-      "Singapore",
     ],
   },
   {
-    message: "Building your personalised journey…",
-    duration: 3000,
+    message: "Almost there…",
+    duration: 2200,
     dots: 4,
-    focusPins: ["Toronto", "Dublin", "Berlin", "Sydney", "Auckland"],
-  },
-  {
-    message: "We found opportunities waiting for you.",
-    duration: 2000,
-    dots: 4,
-    focusPins: ["Toronto", "Dublin", "Berlin", "Sydney", "Auckland"],
+    focusPins: [
+      "Toronto",
+      "London",
+      "Berlin",
+      "Amsterdam",
+      "Dubai",
+      "Singapore",
+      "Sydney",
+      "Auckland",
+    ],
   },
 ];
 
