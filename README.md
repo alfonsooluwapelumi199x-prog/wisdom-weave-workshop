@@ -2,6 +2,8 @@
 
 **One profile. Personalised global opportunities. Clear next steps.**
 
+🌍 **Live demo:** https://forme-opportunity-discovery.lovable.app
+
 ForMe is a profile-led opportunity discovery platform designed to help people explore international pathways without researching every country from scratch.
 
 Instead of starting with *“Where do you want to go?”*, ForMe starts with the person — their education, experience, profession, goals and countries of interest — then turns that information into relevant opportunities, eligibility guidance and a clear next action.
@@ -109,8 +111,8 @@ Client-side Supabase configuration uses a publishable/anonymous key. No Supabase
 ### Setup
 
 ```bash
-git clone <repository-url>
-cd <repository-name>
+git clone https://github.com/alfonsooluwapelumi199x-prog/wisdom-weave-workshop.git
+cd wisdom-weave-workshop
 npm install
 npm run dev
 ```
